@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -41,6 +42,8 @@ import (
 	"go.temporal.io/temporal-proto/workflowservicemock"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+
+	"go.temporal.io/temporal/internal/common"
 )
 
 func testInternalWorkerRegister(r *registry) {
@@ -383,7 +386,7 @@ func (s *internalWorkerTestSuite) testDecisionTaskHandlerHelper(params workerExe
 
 	workflowType := "testReplayWorkflow"
 	workflowID := "testID"
-	runID := "testRunID"
+	runID := common.UUID(uuid.NewRandom())
 
 	task := &workflowservice.PollForDecisionTaskResponse{
 		WorkflowExecution:      &commonproto.WorkflowExecution{WorkflowId: workflowID, RunId: runID},
@@ -655,7 +658,7 @@ func (s *internalWorkerTestSuite) TestCompleteActivityById() {
 		})
 
 	workflowID := "wid"
-	runID := ""
+	var runID []byte
 	activityID := "aid"
 
 	_ = wfClient.CompleteActivityByID(context.Background(), DefaultDomainName, workflowID, runID, activityID, nil, nil)
@@ -713,8 +716,9 @@ func (s *internalWorkerTestSuite) TestRecordActivityHeartbeatByID() {
 			heartbeatRequest = request
 		}).Times(2)
 
-	_ = wfClient.RecordActivityHeartbeatByID(context.Background(), DefaultDomainName, "wid", "rid", "aid")
-	_ = wfClient.RecordActivityHeartbeatByID(context.Background(), DefaultDomainName, "wid", "rid", "aid",
+	rID := common.UUID(uuid.NewRandom())
+	_ = wfClient.RecordActivityHeartbeatByID(context.Background(), DefaultDomainName, "wid", rID, "aid")
+	_ = wfClient.RecordActivityHeartbeatByID(context.Background(), DefaultDomainName, "wid", rID, "aid",
 		"testStack", "customerObjects", 4)
 	require.NotNil(s.T(), heartbeatRequest)
 }

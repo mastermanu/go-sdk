@@ -15,7 +15,7 @@
         },
         "executionStartToCloseTimeoutSeconds": 60,
         "taskStartToCloseTimeoutSeconds": 60,
-        "originalExecutionRunId": "0ea65eda-a0db-4a59-bef3-dce48e8484f8",
+        "originalExecutionRunId": "DqZe2qDbSlm+89zkjoSE+A==",
         "identity": "10773@longer-C02V60N3HTDG@",
         "attempt": 0,
         "cronSchedule": "",
@@ -96,7 +96,7 @@
         "initiatedEventId": 5,
         "workflowExecution": {
           "workflowId": "child_workflow:0ea65eda-a0db-4a59-bef3-dce48e8484f8",
-          "runId": "105dcb3a-c813-43ea-9d8e-da8731a9110c"
+          "runId": "EF3LOsgTQ+qdjtqHMakRDA=="
         },
         "workflowType": {
           "name": "main.SampleChildWorkflow"
@@ -153,8 +153,7 @@
         "decisionTaskCompletedEventId": 9,
         "domain": "samples-domain",
         "workflowExecution": {
-          "workflowId": "child_workflow:0ea65eda-a0db-4a59-bef3-dce48e8484f8",
-          "runId": ""
+          "workflowId": "child_workflow:0ea65eda-a0db-4a59-bef3-dce48e8484f8"
         },
         "signalName": "test-signal",
         "input": "InRlc3QtZGF0YSIK",
@@ -172,8 +171,7 @@
         "initiatedEventId": 10,
         "domain": "2896806f-7a10-47d0-b963-ad80dc5df011",
         "workflowExecution": {
-          "workflowId": "child_workflow:0ea65eda-a0db-4a59-bef3-dce48e8484f8",
-          "runId": ""
+          "workflowId": "child_workflow:0ea65eda-a0db-4a59-bef3-dce48e8484f8"
         },
         "control": "MA=="
       }
@@ -228,7 +226,7 @@
         "domain": "samples-domain",
         "workflowExecution": {
           "workflowId": "child_workflow:0ea65eda-a0db-4a59-bef3-dce48e8484f8",
-          "runId": "1c4e88cc-37fa-4cd1-82b5-997c4c746678"
+          "runId": "HE6IzDf6TNGCtZl8THRmeA=="
         },
         "workflowType": {
           "name": "main.SampleChildWorkflow"

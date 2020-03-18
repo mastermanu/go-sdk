@@ -21,10 +21,14 @@
 package internal
 
 import (
-	"github.com/uber-go/tally"
 	"time"
+
+	"github.com/uber-go/tally"
+
+	"go.temporal.io/temporal/internal/common"
+
+	"go.uber.org/zap"
 )
-import "go.uber.org/zap"
 
 // WorkflowInterceptorFactory is used to create a single link in the interceptor chain
 type WorkflowInterceptorFactory interface {
@@ -55,8 +59,8 @@ type WorkflowInterceptor interface {
 	Now(ctx Context) time.Time
 	NewTimer(ctx Context, d time.Duration) Future
 	Sleep(ctx Context, d time.Duration) (err error)
-	RequestCancelExternalWorkflow(ctx Context, workflowID, runID string) Future
-	SignalExternalWorkflow(ctx Context, workflowID, runID, signalName string, arg interface{}) Future
+	RequestCancelExternalWorkflow(ctx Context, workflowID string, runID common.UUID) Future
+	SignalExternalWorkflow(ctx Context, workflowID string, runID common.UUID, signalName string, arg interface{}) Future
 	UpsertSearchAttributes(ctx Context, attributes map[string]interface{}) error
 	GetSignalChannel(ctx Context, signalName string) Channel
 	SideEffect(ctx Context, f func(ctx Context) interface{}) Value
@@ -126,12 +130,12 @@ func (t *WorkflowInterceptorBase) Sleep(ctx Context, d time.Duration) (err error
 }
 
 // RequestCancelExternalWorkflow forwards to t.Next
-func (t *WorkflowInterceptorBase) RequestCancelExternalWorkflow(ctx Context, workflowID, runID string) Future {
+func (t *WorkflowInterceptorBase) RequestCancelExternalWorkflow(ctx Context, workflowID string, runID common.UUID) Future {
 	return t.Next.RequestCancelExternalWorkflow(ctx, workflowID, runID)
 }
 
 // SignalExternalWorkflow forwards to t.Next
-func (t *WorkflowInterceptorBase) SignalExternalWorkflow(ctx Context, workflowID, runID, signalName string, arg interface{}) Future {
+func (t *WorkflowInterceptorBase) SignalExternalWorkflow(ctx Context, workflowID string, runID common.UUID, signalName string, arg interface{}) Future {
 	return t.Next.SignalExternalWorkflow(ctx, workflowID, runID, signalName, arg)
 }
 

@@ -317,7 +317,7 @@ func (wtp *workflowTaskPoller) processResetStickinessTask(rst *resetStickinessTa
 	if _, err := wtp.service.ResetStickyTaskList(tchCtx, rst.task); err != nil {
 		wtp.logger.Warn("ResetStickyTaskList failed",
 			zap.String(tagWorkflowID, rst.task.Execution.GetWorkflowId()),
-			zap.String(tagRunID, rst.task.Execution.GetRunId()),
+			zap.Binary(tagRunID, rst.task.Execution.GetRunId()),
 			zap.Error(err))
 		return err
 	}
@@ -332,7 +332,7 @@ func (wtp *workflowTaskPoller) RespondTaskCompletedWithMetrics(completedRequest 
 		wtp.logger.Warn("Failed to process decision task.",
 			zap.String(tagWorkflowType, task.WorkflowType.GetName()),
 			zap.String(tagWorkflowID, task.WorkflowExecution.GetWorkflowId()),
-			zap.String(tagRunID, task.WorkflowExecution.GetRunId()),
+			zap.Binary(tagRunID, task.WorkflowExecution.GetRunId()),
 			zap.Error(taskErr))
 		// convert err to DecisionTaskFailed
 		completedRequest = errorToFailDecisionTask(task.TaskToken, taskErr, wtp.identity)
@@ -478,7 +478,7 @@ func (lath *localActivityTaskHandler) executeLocalActivityTask(task *localActivi
 			st := getStackTraceRaw(topLine, 7, 0)
 			lath.logger.Error("LocalActivity panic.",
 				zap.String(tagWorkflowID, task.params.WorkflowInfo.WorkflowExecution.ID),
-				zap.String(tagRunID, task.params.WorkflowInfo.WorkflowExecution.RunID),
+				zap.Binary(tagRunID, task.params.WorkflowInfo.WorkflowExecution.RunID),
 				zap.String(tagActivityType, activityType),
 				zap.String("PanicError", fmt.Sprintf("%v", p)),
 				zap.String("PanicStack", st))
@@ -1006,7 +1006,7 @@ func convertActivityResultToRespondRequest(identity string, taskToken, result []
 		Identity:  identity}
 }
 
-func convertActivityResultToRespondRequestByID(identity, domain, workflowID, runID, activityID string,
+func convertActivityResultToRespondRequestByID(identity, domain, workflowID string, runID common.UUID, activityID string,
 	result []byte, err error, dataConverter DataConverter) interface{} {
 	if err == ErrActivityResultPending {
 		// activity result is pending and will be completed asynchronously.

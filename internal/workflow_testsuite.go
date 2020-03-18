@@ -32,6 +32,8 @@ import (
 
 	commonproto "go.temporal.io/temporal-proto/common"
 	"go.temporal.io/temporal-proto/enums"
+
+	"go.temporal.io/temporal/internal/common"
 )
 
 type (
@@ -358,7 +360,7 @@ func (t *TestWorkflowEnvironment) OnSignalExternalWorkflow(domainName, workflowI
 //       // you can do differently based on the parameters
 //       return nil
 //     })
-func (t *TestWorkflowEnvironment) OnRequestCancelExternalWorkflow(domainName, workflowID, runID string) *MockCallWrapper {
+func (t *TestWorkflowEnvironment) OnRequestCancelExternalWorkflow(domainName, workflowID string, runID common.UUID) *MockCallWrapper {
 	call := t.Mock.On(mockMethodForRequestCancelExternalWorkflow, domainName, workflowID, runID)
 	return t.wrapCall(call)
 }

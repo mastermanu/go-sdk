@@ -83,7 +83,7 @@ type (
 		GetID() string
 
 		// GetRunID return the first started workflow run ID (please see below)
-		GetRunID() string
+		GetRunID() common.UUID
 
 		// Get will fill the workflow execution result to valuePtr,
 		// if workflow execution is a success, or return corresponding,
@@ -103,9 +103,9 @@ type (
 	workflowRunImpl struct {
 		workflowFn    interface{}
 		workflowID    string
-		firstRunID    string
-		currentRunID  string
-		iterFn        func(ctx context.Context, runID string) HistoryEventIterator
+		firstRunID    common.UUID
+		currentRunID  common.UUID
+		iterFn        func(ctx context.Context, runID common.UUID) HistoryEventIterator
 		dataConverter DataConverter
 		registry      *registry
 	}
@@ -264,7 +264,7 @@ func (wc *workflowClient) StartWorkflow(
 func (wc *workflowClient) ExecuteWorkflow(ctx context.Context, options StartWorkflowOptions, workflow interface{}, args ...interface{}) (WorkflowRun, error) {
 
 	// start the workflow execution
-	var runID string
+	var runID common.UUID
 	var workflowID string
 	executionInfo, err := wc.StartWorkflow(ctx, options, workflow, args...)
 	if err != nil {
@@ -279,7 +279,7 @@ func (wc *workflowClient) ExecuteWorkflow(ctx context.Context, options StartWork
 		workflowID = executionInfo.ID
 	}
 
-	iterFn := func(fnCtx context.Context, fnRunID string) HistoryEventIterator {
+	iterFn := func(fnCtx context.Context, fnRunID common.UUID) HistoryEventIterator {
 		return wc.GetWorkflowHistory(fnCtx, workflowID, fnRunID, true, enums.HistoryEventFilterTypeCloseEvent)
 	}
 
@@ -298,9 +298,9 @@ func (wc *workflowClient) ExecuteWorkflow(ctx context.Context, options StartWork
 // reaches the end state, such as workflow finished successfully or timeout.
 // The current timeout resolution implementation is in seconds and uses math.Ceil(d.Seconds()) as the duration. But is
 // subjected to change in the future.
-func (wc *workflowClient) GetWorkflow(_ context.Context, workflowID string, runID string) WorkflowRun {
+func (wc *workflowClient) GetWorkflow(_ context.Context, workflowID string, runID common.UUID) WorkflowRun {
 
-	iterFn := func(fnCtx context.Context, fnRunID string) HistoryEventIterator {
+	iterFn := func(fnCtx context.Context, fnRunID common.UUID) HistoryEventIterator {
 		return wc.GetWorkflowHistory(fnCtx, workflowID, fnRunID, true, enums.HistoryEventFilterTypeCloseEvent)
 	}
 
@@ -315,7 +315,7 @@ func (wc *workflowClient) GetWorkflow(_ context.Context, workflowID string, runI
 }
 
 // SignalWorkflow signals a workflow in execution.
-func (wc *workflowClient) SignalWorkflow(ctx context.Context, workflowID string, runID string, signalName string, arg interface{}) error {
+func (wc *workflowClient) SignalWorkflow(ctx context.Context, workflowID string, runID common.UUID, signalName string, arg interface{}) error {
 	input, err := encodeArg(wc.dataConverter, arg)
 	if err != nil {
 		return err
@@ -446,7 +446,7 @@ func (wc *workflowClient) SignalWithStartWorkflow(ctx context.Context, workflowI
 // CancelWorkflow cancels a workflow in execution.  It allows workflow to properly clean up and gracefully close.
 // workflowID is required, other parameters are optional.
 // If runID is omit, it will terminate currently running workflow (if there is one) based on the workflowID.
-func (wc *workflowClient) CancelWorkflow(ctx context.Context, workflowID string, runID string) error {
+func (wc *workflowClient) CancelWorkflow(ctx context.Context, workflowID string, runID common.UUID) error {
 	request := &workflowservice.RequestCancelWorkflowExecutionRequest{
 		Domain: wc.domain,
 		WorkflowExecution: &commonproto.WorkflowExecution{
@@ -468,7 +468,7 @@ func (wc *workflowClient) CancelWorkflow(ctx context.Context, workflowID string,
 // TerminateWorkflow terminates a workflow execution.
 // workflowID is required, other parameters are optional.
 // If runID is omit, it will terminate currently running workflow (if there is one) based on the workflowID.
-func (wc *workflowClient) TerminateWorkflow(ctx context.Context, workflowID string, runID string, reason string, details []byte) error {
+func (wc *workflowClient) TerminateWorkflow(ctx context.Context, workflowID string, runID common.UUID, reason string, details []byte) error {
 	request := &workflowservice.TerminateWorkflowExecutionRequest{
 		Domain: wc.domain,
 		WorkflowExecution: &commonproto.WorkflowExecution{
@@ -492,7 +492,7 @@ func (wc *workflowClient) TerminateWorkflow(ctx context.Context, workflowID stri
 }
 
 // GetWorkflowHistory return a channel which contains the history events of a given workflow
-func (wc *workflowClient) GetWorkflowHistory(ctx context.Context, workflowID string, runID string,
+func (wc *workflowClient) GetWorkflowHistory(ctx context.Context, workflowID string, runID common.UUID,
 	isLongPoll bool, filterType enums.HistoryEventFilterType) HistoryEventIterator {
 
 	domain := wc.domain
@@ -566,7 +566,7 @@ func (wc *workflowClient) CompleteActivity(ctx context.Context, taskToken []byte
 
 // CompleteActivityById reports activity completed. Similar to CompleteActivity
 // It takes domain name, workflowID, runID, activityID as arguments.
-func (wc *workflowClient) CompleteActivityByID(ctx context.Context, domain, workflowID, runID, activityID string,
+func (wc *workflowClient) CompleteActivityByID(ctx context.Context, domain, workflowID string, runID common.UUID, activityID string,
 	result interface{}, err error) error {
 
 	if activityID == "" || workflowID == "" || domain == "" {
@@ -597,7 +597,7 @@ func (wc *workflowClient) RecordActivityHeartbeat(ctx context.Context, taskToken
 
 // RecordActivityHeartbeatByID records heartbeat for an activity.
 func (wc *workflowClient) RecordActivityHeartbeatByID(ctx context.Context,
-	domain, workflowID, runID, activityID string, details ...interface{}) error {
+	domain, workflowID string, runID common.UUID, activityID string, details ...interface{}) error {
 	data, err := encodeArgs(wc.dataConverter, details)
 	if err != nil {
 		return err
@@ -767,7 +767,7 @@ func (wc *workflowClient) GetSearchAttributes(ctx context.Context) (*workflowser
 //  - BadRequestError
 //  - InternalServiceError
 //  - EntityNotExistError
-func (wc *workflowClient) DescribeWorkflowExecution(ctx context.Context, workflowID, runID string) (*workflowservice.DescribeWorkflowExecutionResponse, error) {
+func (wc *workflowClient) DescribeWorkflowExecution(ctx context.Context, workflowID string, runID common.UUID) (*workflowservice.DescribeWorkflowExecutionResponse, error) {
 	request := &workflowservice.DescribeWorkflowExecutionRequest{
 		Domain: wc.domain,
 		Execution: &commonproto.WorkflowExecution{
@@ -802,7 +802,7 @@ func (wc *workflowClient) DescribeWorkflowExecution(ctx context.Context, workflo
 //  - InternalServiceError
 //  - EntityNotExistError
 //  - QueryFailError
-func (wc *workflowClient) QueryWorkflow(ctx context.Context, workflowID string, runID string, queryType string, args ...interface{}) (Value, error) {
+func (wc *workflowClient) QueryWorkflow(ctx context.Context, workflowID string, runID common.UUID, queryType string, args ...interface{}) (Value, error) {
 	queryWorkflowWithOptionsRequest := &QueryWorkflowWithOptionsRequest{
 		WorkflowID: workflowID,
 		RunID:      runID,
@@ -823,7 +823,7 @@ type QueryWorkflowWithOptionsRequest struct {
 
 	// RunID is an optional field used to identify a specific run of the queried workflow.
 	// If RunID is not provided the latest run will be used.
-	RunID string
+	RunID common.UUID
 
 	// QueryType is a required field which specifies the query you want to run.
 	// By default, temporal supports "__stack_trace" as a standard query type, which will return string value
@@ -1075,7 +1075,7 @@ func (iter *historyEventIteratorImpl) Next() (*commonproto.HistoryEvent, error) 
 	panic("HistoryEventIterator Next() should return either a history event or a err")
 }
 
-func (workflowRun *workflowRunImpl) GetRunID() string {
+func (workflowRun *workflowRunImpl) GetRunID() common.UUID {
 	return workflowRun.firstRunID
 }
 

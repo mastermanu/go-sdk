@@ -26,6 +26,7 @@ import (
 
 	"go.temporal.io/temporal/encoded"
 	"go.temporal.io/temporal/internal"
+	"go.temporal.io/temporal/internal/common"
 )
 
 type (
@@ -163,7 +164,7 @@ func GetMetricsScope(ctx Context) tally.Scope {
 // of the target workflow using the context like:
 //	ctx := WithWorkflowDomain(ctx, "domain-name")
 // RequestCancelExternalWorkflow return Future with failure or empty success result.
-func RequestCancelExternalWorkflow(ctx Context, workflowID, runID string) Future {
+func RequestCancelExternalWorkflow(ctx Context, workflowID string, runID common.UUID) Future {
 	return internal.RequestCancelExternalWorkflow(ctx, workflowID, runID)
 }
 
@@ -175,7 +176,7 @@ func RequestCancelExternalWorkflow(ctx Context, workflowID, runID string) Future
 // of the target workflow using the context like:
 //	ctx := WithWorkflowDomain(ctx, "domain-name")
 // SignalExternalWorkflow return Future with failure or empty success result.
-func SignalExternalWorkflow(ctx Context, workflowID, runID, signalName string, arg interface{}) Future {
+func SignalExternalWorkflow(ctx Context, workflowID string, runID common.UUID, signalName string, arg interface{}) Future {
 	return internal.SignalExternalWorkflow(ctx, workflowID, runID, signalName, arg)
 }
 

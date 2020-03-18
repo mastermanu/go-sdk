@@ -34,6 +34,7 @@ import (
 	"go.temporal.io/temporal/client"
 	"go.temporal.io/temporal/encoded"
 	"go.temporal.io/temporal/internal"
+	"go.temporal.io/temporal/internal/common"
 	"go.temporal.io/temporal/workflow"
 )
 
@@ -43,7 +44,7 @@ type Client struct {
 }
 
 // CancelWorkflow provides a mock function with given fields: ctx, workflowID, runID
-func (_m *Client) CancelWorkflow(ctx context.Context, workflowID string, runID string) error {
+func (_m *Client) CancelWorkflow(ctx context.Context, workflowID string, runID common.UUID) error {
 	ret := _m.Called(ctx, workflowID, runID)
 
 	var r0 error
@@ -71,7 +72,7 @@ func (_m *Client) CompleteActivity(ctx context.Context, taskToken []byte, result
 }
 
 // CompleteActivityByID provides a mock function with given fields: ctx, domain, workflowID, runID, activityID, result, err
-func (_m *Client) CompleteActivityByID(ctx context.Context, domain string, workflowID string, runID string, activityID string, result interface{}, err error) error {
+func (_m *Client) CompleteActivityByID(ctx context.Context, domain string, workflowID string, runID common.UUID, activityID string, result interface{}, err error) error {
 	ret := _m.Called(ctx, domain, workflowID, runID, activityID, result, err)
 
 	var r0 error
@@ -131,7 +132,7 @@ func (_m *Client) DescribeTaskList(ctx context.Context, tasklist string, tasklis
 }
 
 // DescribeWorkflowExecution provides a mock function with given fields: ctx, workflowID, runID
-func (_m *Client) DescribeWorkflowExecution(ctx context.Context, workflowID string, runID string) (*workflowservice.DescribeWorkflowExecutionResponse, error) {
+func (_m *Client) DescribeWorkflowExecution(ctx context.Context, workflowID string, runID common.UUID) (*workflowservice.DescribeWorkflowExecutionResponse, error) {
 	ret := _m.Called(ctx, workflowID, runID)
 
 	var r0 *workflowservice.DescribeWorkflowExecutionResponse
@@ -203,7 +204,7 @@ func (_m *Client) GetSearchAttributes(ctx context.Context) (*workflowservice.Get
 }
 
 // GetWorkflow provides a mock function with given fields: ctx, workflowID, runID
-func (_m *Client) GetWorkflow(ctx context.Context, workflowID string, runID string) client.WorkflowRun {
+func (_m *Client) GetWorkflow(ctx context.Context, workflowID string, runID common.UUID) client.WorkflowRun {
 	ret := _m.Called(ctx, workflowID, runID)
 
 	var r0 client.WorkflowRun
@@ -219,7 +220,7 @@ func (_m *Client) GetWorkflow(ctx context.Context, workflowID string, runID stri
 }
 
 // GetWorkflowHistory provides a mock function with given fields: ctx, workflowID, runID, isLongPoll, filterType
-func (_m *Client) GetWorkflowHistory(ctx context.Context, workflowID string, runID string, isLongPoll bool, filterType enums.HistoryEventFilterType) client.HistoryEventIterator {
+func (_m *Client) GetWorkflowHistory(ctx context.Context, workflowID string, runID common.UUID, isLongPoll bool, filterType enums.HistoryEventFilterType) client.HistoryEventIterator {
 	ret := _m.Called(ctx, workflowID, runID, isLongPoll, filterType)
 
 	var r0 internal.HistoryEventIterator
@@ -327,7 +328,7 @@ func (_m *Client) ListArchivedWorkflow(ctx context.Context, request *workflowser
 }
 
 // QueryWorkflow provides a mock function with given fields: ctx, workflowID, runID, queryType, args
-func (_m *Client) QueryWorkflow(ctx context.Context, workflowID string, runID string, queryType string, args ...interface{}) (encoded.Value, error) {
+func (_m *Client) QueryWorkflow(ctx context.Context, workflowID string, runID common.UUID, queryType string, args ...interface{}) (encoded.Value, error) {
 	var _ca []interface{}
 	_ca = append(_ca, ctx, workflowID, runID, queryType)
 	_ca = append(_ca, args...)
@@ -395,7 +396,7 @@ func (_m *Client) RecordActivityHeartbeat(ctx context.Context, taskToken []byte,
 }
 
 // RecordActivityHeartbeatByID provides a mock function with given fields: ctx, domain, workflowID, runID, activityID, details
-func (_m *Client) RecordActivityHeartbeatByID(ctx context.Context, domain string, workflowID string, runID string, activityID string, details ...interface{}) error {
+func (_m *Client) RecordActivityHeartbeatByID(ctx context.Context, domain string, workflowID string, runID common.UUID, activityID string, details ...interface{}) error {
 	var _ca []interface{}
 	_ca = append(_ca, ctx, domain, workflowID, runID, activityID)
 	_ca = append(_ca, details...)
@@ -461,7 +462,7 @@ func (_m *Client) SignalWithStartWorkflow(ctx context.Context, workflowID string
 }
 
 // SignalWorkflow provides a mock function with given fields: ctx, workflowID, runID, signalName, arg
-func (_m *Client) SignalWorkflow(ctx context.Context, workflowID string, runID string, signalName string, arg interface{}) error {
+func (_m *Client) SignalWorkflow(ctx context.Context, workflowID string, runID common.UUID, signalName string, arg interface{}) error {
 	ret := _m.Called(ctx, workflowID, runID, signalName, arg)
 
 	var r0 error
@@ -501,7 +502,7 @@ func (_m *Client) StartWorkflow(ctx context.Context, options client.StartWorkflo
 }
 
 // TerminateWorkflow provides a mock function with given fields: ctx, workflowID, runID, reason, details
-func (_m *Client) TerminateWorkflow(ctx context.Context, workflowID string, runID string, reason string, details []byte) error {
+func (_m *Client) TerminateWorkflow(ctx context.Context, workflowID string, runID common.UUID, reason string, details []byte) error {
 	ret := _m.Called(ctx, workflowID, runID, reason, details)
 
 	var r0 error

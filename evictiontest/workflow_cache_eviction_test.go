@@ -29,6 +29,7 @@
 package evictiontest
 
 import (
+	"encoding/binary"
 	"strconv"
 	"testing"
 	"time"
@@ -115,7 +116,9 @@ func (s *CacheEvictionSuite) TestResetStickyOnEviction() {
 	) (success *workflowservice.PollForDecisionTaskResponse, err error) {
 		taskID := taskCounter.Inc()
 		workflowID := "testID" + strconv.Itoa(int(taskID))
-		runID := "runID" + strconv.Itoa(int(taskID))
+		runID := make([]byte, 16)
+		binary.LittleEndian.PutUint64(runID, uint64(taskID))
+
 		// how we initialize the response here is the result of a series of trial and error
 		// the goal is we want to fabricate a response that looks real enough to our worker
 		// that it will actually go along with processing it instead of just tossing it out

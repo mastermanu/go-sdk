@@ -25,6 +25,8 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
+
+	"go.temporal.io/temporal/internal/common"
 )
 
 const (
@@ -51,7 +53,7 @@ func createOpenTracingActivitySpan(
 	ctx context.Context,
 	tracer opentracing.Tracer,
 	start time.Time,
-	activityType, workflowID, runID string,
+	activityType, workflowID string, runID common.UUID,
 ) (context.Context, opentracing.Span) {
 	tags := opentracing.Tags{
 		workflowTag: workflowID,

@@ -201,7 +201,7 @@ func newWorkflowExecutionEventHandler(
 	context.logger = logger.With(
 		zapcore.Field{Key: tagWorkflowType, Type: zapcore.StringType, String: workflowInfo.WorkflowType.Name},
 		zapcore.Field{Key: tagWorkflowID, Type: zapcore.StringType, String: workflowInfo.WorkflowExecution.ID},
-		zapcore.Field{Key: tagRunID, Type: zapcore.StringType, String: workflowInfo.WorkflowExecution.RunID},
+		zapcore.Field{Key: tagRunID, Type: zapcore.BinaryType, Interface: workflowInfo.WorkflowExecution.RunID.Downcast()},
 	).WithOptions(zap.WrapCore(wrapLogger(&context.isReplay, &context.enableLoggingInReplay)))
 
 	if scope != nil {
@@ -271,17 +271,17 @@ func (wc *workflowEnvironmentImpl) Complete(result []byte, err error) {
 
 func (wc *workflowEnvironmentImpl) RequestCancelChildWorkflow(domainName string, workflowID string) {
 	// For cancellation of child workflow only, we do not use cancellation ID and run ID
-	wc.decisionsHelper.requestCancelExternalWorkflowExecution(domainName, workflowID, "", "", true)
+	wc.decisionsHelper.requestCancelExternalWorkflowExecution(domainName, workflowID, nil, "", true)
 }
 
-func (wc *workflowEnvironmentImpl) RequestCancelExternalWorkflow(domainName, workflowID, runID string, callback resultHandler) {
+func (wc *workflowEnvironmentImpl) RequestCancelExternalWorkflow(domainName, workflowID string, runID common.UUID, callback resultHandler) {
 	// for cancellation of external workflow, we have to use cancellation ID and set isChildWorkflowOnly to false
 	cancellationID := wc.GenerateSequenceID()
 	decision := wc.decisionsHelper.requestCancelExternalWorkflowExecution(domainName, workflowID, runID, cancellationID, false)
 	decision.setData(&scheduledCancellation{callback: callback})
 }
 
-func (wc *workflowEnvironmentImpl) SignalExternalWorkflow(domainName, workflowID, runID, signalName string,
+func (wc *workflowEnvironmentImpl) SignalExternalWorkflow(domainName, workflowID string, runID common.UUID, signalName string,
 	input []byte, _ /* THIS IS FOR TEST FRAMEWORK. DO NOT USE HERE. */ interface{}, childWorkflowOnly bool, callback resultHandler) {
 
 	signalID := wc.GenerateSequenceID()
@@ -348,7 +348,7 @@ func (wc *workflowEnvironmentImpl) RegisterCancelHandler(handler func()) {
 func (wc *workflowEnvironmentImpl) ExecuteChildWorkflow(
 	params executeWorkflowParams, callback resultHandler, startedHandler func(r WorkflowExecution, e error)) error {
 	if params.workflowID == "" {
-		params.workflowID = wc.workflowInfo.WorkflowExecution.RunID + "_" + wc.GenerateSequenceID()
+		params.workflowID = wc.workflowInfo.WorkflowExecution.RunID.String() + "_" + wc.GenerateSequenceID()
 	}
 	memo, err := getWorkflowMemo(params.memo, wc.dataConverter)
 	if err != nil {
@@ -926,7 +926,7 @@ func (weh *workflowExecutionEventHandlerImpl) ProcessQuery(queryType string, que
 			weh.logger.Error("Query result size exceeds limit.",
 				zap.String(tagQueryType, queryType),
 				zap.String(tagWorkflowID, weh.workflowInfo.WorkflowExecution.ID),
-				zap.String(tagRunID, weh.workflowInfo.WorkflowExecution.RunID))
+				zap.Binary(tagRunID, weh.workflowInfo.WorkflowExecution.RunID))
 			return nil, fmt.Errorf("query result size (%v) exceeds limit (%v)", resultSize, queryResultSizeLimit)
 		}
 
@@ -1157,7 +1157,7 @@ func (weh *workflowExecutionEventHandlerImpl) handleStartChildWorkflowExecutionF
 		return nil
 	}
 
-	err := serviceerror.NewWorkflowExecutionAlreadyStarted("Workflow execution already started", "", "")
+	err := serviceerror.NewWorkflowExecutionAlreadyStarted("Workflow execution already started", "", nil)
 	childWorkflow.handle(nil, err)
 
 	return nil

@@ -38,6 +38,8 @@ import (
 
 	commonproto "go.temporal.io/temporal-proto/common"
 	"go.temporal.io/temporal-proto/enums"
+
+	"go.temporal.io/temporal/internal/common"
 )
 
 type WorkflowTestSuiteUnitTest struct {
@@ -1393,16 +1395,16 @@ func (s *WorkflowTestSuiteUnitTest) Test_MockUpsertSearchAttributes() {
 
 func (s *WorkflowTestSuiteUnitTest) Test_ActivityWithProtoTypes() {
 	var actualValues []string
-	retVal := &commonproto.WorkflowExecution{WorkflowId: "retwID2", RunId: "retrID2"}
+	retVal := &commonproto.WorkflowExecution{WorkflowId: "retwID2", RunId: common.MustParseUUID("deadbeef-c001-face-0000-0000000000c2")}
 
 	// Passing one argument
 	activitySingleFn := func(ctx context.Context, wf *commonproto.WorkflowExecution) (*commonproto.WorkflowExecution, error) {
 		actualValues = append(actualValues, wf.GetWorkflowId())
-		actualValues = append(actualValues, wf.GetRunId())
+		actualValues = append(actualValues, common.UUIDString(wf.GetRunId()))
 		return retVal, nil
 	}
 
-	input := &commonproto.WorkflowExecution{WorkflowId: "wID1", RunId: "rID1"}
+	input := &commonproto.WorkflowExecution{WorkflowId: "wID1", RunId: common.MustParseUUID("deadbeef-c001-face-0000-0000000000c1")}
 	env := s.NewTestActivityEnvironment()
 	env.RegisterActivity(activitySingleFn)
 	blob, err := env.ExecuteActivity(activitySingleFn, input)
@@ -1414,12 +1416,12 @@ func (s *WorkflowTestSuiteUnitTest) Test_ActivityWithProtoTypes() {
 	// Passing more than one argument
 	activityDoubleArgFn := func(ctx context.Context, wf *commonproto.WorkflowExecution, t *commonproto.WorkflowType) (*commonproto.WorkflowExecution, error) {
 		actualValues = append(actualValues, wf.GetWorkflowId())
-		actualValues = append(actualValues, wf.GetRunId())
+		actualValues = append(actualValues, common.UUIDString(wf.GetRunId()))
 		actualValues = append(actualValues, t.GetName())
 		return retVal, nil
 	}
 
-	input = &commonproto.WorkflowExecution{WorkflowId: "wID2", RunId: "rID3"}
+	input = &commonproto.WorkflowExecution{WorkflowId: "wID2", RunId: common.MustParseUUID("deadbeef-c001-face-0000-0000000000c3")}
 	wt := &commonproto.WorkflowType{Name: "wType"}
 	env = s.NewTestActivityEnvironment()
 	env.RegisterActivity(activityDoubleArgFn)
@@ -1430,9 +1432,9 @@ func (s *WorkflowTestSuiteUnitTest) Test_ActivityWithProtoTypes() {
 
 	expectedValues := []string{
 		"wID1",
-		"rID1",
+		"deadbeef-c001-face-0000-0000000000c1",
 		"wID2",
-		"rID3",
+		"deadbeef-c001-face-0000-0000000000c3",
 		"wType",
 	}
 	s.EqualValues(expectedValues, actualValues)
@@ -1821,12 +1823,16 @@ func (s *WorkflowTestSuiteUnitTest) Test_SignalChildWorkflow() {
 func (s *WorkflowTestSuiteUnitTest) Test_SignalExternalWorkflow() {
 	signalName := "test-signal-name"
 	signalData := "test-signal-data"
+	r1 := common.MustParseUUID("deadbeef-c001-face-0000-0000000000d1")
+	r2 := common.MustParseUUID("deadbeef-c001-face-0000-0000000000d2")
+	r3 := common.MustParseUUID("deadbeef-c001-face-0000-0000000000d3")
+
 	workflowFn := func(ctx Context) error {
 		// set domain to be more specific
 		ctx = WithWorkflowDomain(ctx, "test-domain")
-		f1 := SignalExternalWorkflow(ctx, "test-workflow-id1", "test-runid1", signalName, signalData)
-		f2 := SignalExternalWorkflow(ctx, "test-workflow-id2", "test-runid2", signalName, signalData)
-		f3 := SignalExternalWorkflow(ctx, "test-workflow-id3", "test-runid3", signalName, signalData)
+		f1 := SignalExternalWorkflow(ctx, "test-workflow-id1", r1, signalName, signalData)
+		f2 := SignalExternalWorkflow(ctx, "test-workflow-id2", r2, signalName, signalData)
+		f3 := SignalExternalWorkflow(ctx, "test-workflow-id3", r3, signalName, signalData)
 
 		// signal1 succeed
 		err1 := f1.Get(ctx, nil)
@@ -1866,16 +1872,16 @@ func (s *WorkflowTestSuiteUnitTest) Test_SignalExternalWorkflow() {
 	env.RegisterWorkflow(workflowFn)
 
 	// signal1 should succeed
-	env.OnSignalExternalWorkflow("test-domain", "test-workflow-id1", "test-runid1", signalName, signalData).Return(nil).Once()
+	env.OnSignalExternalWorkflow("test-domain", "test-workflow-id1", r1, signalName, signalData).Return(nil).Once()
 
 	// signal2 should fail
-	env.OnSignalExternalWorkflow("test-domain", "test-workflow-id2", "test-runid2", signalName, signalData).Return(
-		func(domainName, workflowID, runID, signalName string, arg interface{}) error {
+	env.OnSignalExternalWorkflow("test-domain", "test-workflow-id2", r2, signalName, signalData).Return(
+		func(domainName, workflowID string, runID common.UUID, signalName string, arg interface{}) error {
 			return errors.New("unknown external workflow")
 		}).Once()
 
 	// signal3 should succeed with delay, mock match exactly the parameters
-	env.OnSignalExternalWorkflow("test-domain", "test-workflow-id3", "test-runid3", signalName, signalData).After(time.Minute).Return(nil).Once()
+	env.OnSignalExternalWorkflow("test-domain", "test-workflow-id3", r3, signalName, signalData).After(time.Minute).Return(nil).Once()
 
 	env.ExecuteWorkflow(workflowFn)
 	env.AssertExpectations(s.T())
@@ -1927,11 +1933,13 @@ func (s *WorkflowTestSuiteUnitTest) Test_CancelChildWorkflow() {
 }
 
 func (s *WorkflowTestSuiteUnitTest) Test_CancelExternalWorkflow() {
+	r1 := common.MustParseUUID("deadbeef-c001-face-0000-0000000000e1")
+	r2 := common.MustParseUUID("deadbeef-c001-face-0000-0000000000e2")
 	workflowFn := func(ctx Context) error {
 		// set domain to be more specific
 		ctx = WithWorkflowDomain(ctx, "test-domain")
-		f1 := RequestCancelExternalWorkflow(ctx, "test-workflow-id1", "test-runid1")
-		f2 := RequestCancelExternalWorkflow(ctx, "test-workflow-id2", "test-runid2")
+		f1 := RequestCancelExternalWorkflow(ctx, "test-workflow-id1", r1)
+		f2 := RequestCancelExternalWorkflow(ctx, "test-workflow-id2", r2)
 
 		// cancellation 1 succeed
 		err1 := f1.Get(ctx, nil)
@@ -1952,11 +1960,11 @@ func (s *WorkflowTestSuiteUnitTest) Test_CancelExternalWorkflow() {
 	env.RegisterWorkflow(workflowFn)
 
 	// cancellation 1 should succeed
-	env.OnRequestCancelExternalWorkflow("test-domain", "test-workflow-id1", "test-runid1").Return(nil).Once()
+	env.OnRequestCancelExternalWorkflow("test-domain", "test-workflow-id1", r1).Return(nil).Once()
 
 	// cancellation 2 should fail
-	env.OnRequestCancelExternalWorkflow("test-domain", "test-workflow-id2", "test-runid2").Return(
-		func(domainName, workflowID, runID string) error {
+	env.OnRequestCancelExternalWorkflow("test-domain", "test-workflow-id2", r2).Return(
+		func(domainName, workflowID string, runID common.UUID) error {
 			return errors.New("unknown external workflow")
 		}).Once()
 

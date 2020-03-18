@@ -1219,10 +1219,10 @@ func (aw *WorkflowReplayer) replayWorkflowHistory(logger *zap.Logger, service wo
 	}
 	workflowType := attr.WorkflowType
 	execution := &commonproto.WorkflowExecution{
-		RunId:      uuid.NewRandom().String(),
+		RunId:      uuid.NewRandom(),
 		WorkflowId: "ReplayId",
 	}
-	if first.GetWorkflowExecutionStartedEventAttributes().GetOriginalExecutionRunId() != "" {
+	if first.GetWorkflowExecutionStartedEventAttributes().GetOriginalExecutionRunId() != nil {
 		execution.RunId = first.GetWorkflowExecutionStartedEventAttributes().GetOriginalExecutionRunId()
 	}
 

@@ -41,6 +41,7 @@ import (
 	"go.temporal.io/temporal-proto/workflowservice"
 	"go.uber.org/zap"
 
+	"go.temporal.io/temporal/internal/common"
 	"go.temporal.io/temporal/internal/common/backoff"
 	"go.temporal.io/temporal/internal/common/cache"
 	"go.temporal.io/temporal/internal/common/metrics"
@@ -421,7 +422,7 @@ func getWorkflowCache() cache.Cache {
 	return workflowCache
 }
 
-func getWorkflowContext(runID string) *workflowExecutionContextImpl {
+func getWorkflowContext(runID common.UUID) *workflowExecutionContextImpl {
 	o := getWorkflowCache().Get(runID)
 	if o == nil {
 		return nil
@@ -430,7 +431,7 @@ func getWorkflowContext(runID string) *workflowExecutionContextImpl {
 	return wc
 }
 
-func putWorkflowContext(runID string, wc *workflowExecutionContextImpl) (*workflowExecutionContextImpl, error) {
+func putWorkflowContext(runID common.UUID, wc *workflowExecutionContextImpl) (*workflowExecutionContextImpl, error) {
 	existing, err := getWorkflowCache().PutIfNotExist(runID, wc)
 	if err != nil {
 		return nil, err
@@ -438,7 +439,7 @@ func putWorkflowContext(runID string, wc *workflowExecutionContextImpl) (*workfl
 	return existing.(*workflowExecutionContextImpl), nil
 }
 
-func removeWorkflowContext(runID string) {
+func removeWorkflowContext(runID common.UUID) {
 	getWorkflowCache().Delete(runID)
 }
 
@@ -741,7 +742,7 @@ func (wth *workflowTaskHandlerImpl) ProcessWorkflowTask(
 		wth.logger.Debug("Processing new workflow task.",
 			zap.String(tagWorkflowType, task.WorkflowType.GetName()),
 			zap.String(tagWorkflowID, workflowID),
-			zap.String(tagRunID, runID),
+			zap.Binary(tagRunID, runID),
 			zap.Int64("PreviousStartedEventId", task.GetPreviousStartedEventId()))
 	})
 
@@ -916,7 +917,7 @@ ProcessEvents:
 		w.wth.logger.Error("non-deterministic-error",
 			zap.String(tagWorkflowType, task.WorkflowType.GetName()),
 			zap.String(tagWorkflowID, task.WorkflowExecution.GetWorkflowId()),
-			zap.String(tagRunID, task.WorkflowExecution.GetRunId()),
+			zap.Binary(tagRunID, task.WorkflowExecution.GetRunId()),
 			zap.Error(nonDeterministicErr))
 
 		switch w.wth.nonDeterministicWorkflowPolicy {
@@ -1116,7 +1117,7 @@ func (w *workflowExecutionContextImpl) ResetIfStale(task *workflowservice.PollFo
 	if len(task.History.Events) > 0 && task.History.Events[0].GetEventId() != w.previousStartedEventID+1 {
 		w.wth.logger.Debug("Cached state staled, new task has unexpected events",
 			zap.String(tagWorkflowID, task.WorkflowExecution.GetWorkflowId()),
-			zap.String(tagRunID, task.WorkflowExecution.GetRunId()),
+			zap.Binary(tagRunID, task.WorkflowExecution.GetRunId()),
 			zap.Int64("CachedPreviousStartedEventID", w.previousStartedEventID),
 			zap.Int64("TaskFirstEventID", task.History.Events[0].GetEventId()),
 			zap.Int64("TaskStartedEventID", task.GetStartedEventId()),
@@ -1461,7 +1462,7 @@ func (wth *workflowTaskHandlerImpl) completeWorkflow(
 		metricsScope.Counter(metrics.DecisionTaskPanicCounter).Inc(1)
 		wth.logger.Error("Workflow panic.",
 			zap.String(tagWorkflowID, task.WorkflowExecution.GetWorkflowId()),
-			zap.String(tagRunID, task.WorkflowExecution.GetRunId()),
+			zap.Binary(tagRunID, task.WorkflowExecution.GetRunId()),
 			zap.String("PanicError", panicErr.Error()),
 			zap.String("PanicStack", panicErr.StackTrace()))
 		return errorToFailDecisionTask(task.TaskToken, panicErr, wth.identity)
@@ -1744,7 +1745,7 @@ func (ath *activityTaskHandlerImpl) Execute(taskList string, t *workflowservice.
 	traceLog(func() {
 		ath.logger.Debug("Processing new activity task",
 			zap.String(tagWorkflowID, t.WorkflowExecution.GetWorkflowId()),
-			zap.String(tagRunID, t.WorkflowExecution.GetRunId()),
+			zap.Binary(tagRunID, t.WorkflowExecution.GetRunId()),
 			zap.String(tagActivityType, t.ActivityType.GetName()))
 	})
 
@@ -1779,7 +1780,7 @@ func (ath *activityTaskHandlerImpl) Execute(taskList string, t *workflowservice.
 			st := getStackTraceRaw(topLine, 7, 0)
 			ath.logger.Error("Activity panic.",
 				zap.String(tagWorkflowID, t.WorkflowExecution.GetWorkflowId()),
-				zap.String(tagRunID, t.WorkflowExecution.GetRunId()),
+				zap.Binary(tagRunID, t.WorkflowExecution.GetRunId()),
 				zap.String(tagActivityType, activityType),
 				zap.String("PanicError", fmt.Sprintf("%v", p)),
 				zap.String("PanicStack", st))
@@ -1811,7 +1812,7 @@ func (ath *activityTaskHandlerImpl) Execute(taskList string, t *workflowservice.
 	if err != nil {
 		ath.logger.Error("Activity error.",
 			zap.String(tagWorkflowID, t.WorkflowExecution.GetWorkflowId()),
-			zap.String(tagRunID, t.WorkflowExecution.GetRunId()),
+			zap.Binary(tagRunID, t.WorkflowExecution.GetRunId()),
 			zap.String(tagActivityType, activityType),
 			zap.Error(err),
 		)
@@ -1877,7 +1878,9 @@ func recordActivityHeartbeatByID(
 	ctx context.Context,
 	service workflowservice.WorkflowServiceClient,
 	identity string,
-	domain, workflowID, runID, activityID string,
+	domain, workflowID string,
+	runID common.UUID,
+	activityID string,
 	details []byte,
 ) error {
 	request := &workflowservice.RecordActivityTaskHeartbeatByIDRequest{

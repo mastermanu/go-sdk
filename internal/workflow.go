@@ -29,9 +29,10 @@ import (
 
 	"github.com/uber-go/tally"
 	commonproto "go.temporal.io/temporal-proto/common"
+	"go.uber.org/zap"
+
 	"go.temporal.io/temporal/internal/common"
 	"go.temporal.io/temporal/internal/common/backoff"
-	"go.uber.org/zap"
 )
 
 var (
@@ -144,7 +145,7 @@ type (
 	// WorkflowExecution Details.
 	WorkflowExecution struct {
 		ID    string
-		RunID string
+		RunID common.UUID
 	}
 
 	// EncodedValue is type alias used to encapsulate/extract encoded result from workflow/activity.
@@ -713,7 +714,7 @@ type WorkflowInfo struct {
 	Attempt                             int32 // Attempt starts from 0 and increased by 1 for every retry if retry policy is specified.
 	lastCompletionResult                []byte
 	CronSchedule                        string
-	ContinuedExecutionRunID             string
+	ContinuedExecutionRunID             common.UUID
 	ParentWorkflowDomain                string
 	ParentWorkflowExecution             *WorkflowExecution
 	Memo                                *commonproto.Memo
@@ -832,12 +833,12 @@ func (wc *workflowEnvironmentInterceptor) Sleep(ctx Context, d time.Duration) (e
 // of the target workflow using the context like:
 //	ctx := WithWorkflowDomain(ctx, "domain-name")
 // RequestCancelExternalWorkflow return Future with failure or empty success result.
-func RequestCancelExternalWorkflow(ctx Context, workflowID, runID string) Future {
+func RequestCancelExternalWorkflow(ctx Context, workflowID string, runID common.UUID) Future {
 	i := getWorkflowInterceptor(ctx)
 	return i.RequestCancelExternalWorkflow(ctx, workflowID, runID)
 }
 
-func (wc *workflowEnvironmentInterceptor) RequestCancelExternalWorkflow(ctx Context, workflowID, runID string) Future {
+func (wc *workflowEnvironmentInterceptor) RequestCancelExternalWorkflow(ctx Context, workflowID string, runID common.UUID) Future {
 	ctx1 := setWorkflowEnvOptionsIfNotExist(ctx)
 	options := getWorkflowEnvOptions(ctx1)
 	future, settable := NewFuture(ctx1)
@@ -874,17 +875,17 @@ func (wc *workflowEnvironmentInterceptor) RequestCancelExternalWorkflow(ctx Cont
 // of the target workflow using the context like:
 //	ctx := WithWorkflowDomain(ctx, "domain-name")
 // SignalExternalWorkflow return Future with failure or empty success result.
-func SignalExternalWorkflow(ctx Context, workflowID, runID, signalName string, arg interface{}) Future {
+func SignalExternalWorkflow(ctx Context, workflowID string, runID common.UUID, signalName string, arg interface{}) Future {
 	i := getWorkflowInterceptor(ctx)
 	return i.SignalExternalWorkflow(ctx, workflowID, runID, signalName, arg)
 }
 
-func (wc *workflowEnvironmentInterceptor) SignalExternalWorkflow(ctx Context, workflowID, runID, signalName string, arg interface{}) Future {
+func (wc *workflowEnvironmentInterceptor) SignalExternalWorkflow(ctx Context, workflowID string, runID common.UUID, signalName string, arg interface{}) Future {
 	const childWorkflowOnly = false // this means we are not limited to child workflow
 	return signalExternalWorkflow(ctx, workflowID, runID, signalName, arg, childWorkflowOnly)
 }
 
-func signalExternalWorkflow(ctx Context, workflowID, runID, signalName string, arg interface{}, childWorkflowOnly bool) Future {
+func signalExternalWorkflow(ctx Context, workflowID string, runID common.UUID, signalName string, arg interface{}, childWorkflowOnly bool) Future {
 	env := getWorkflowEnvironment(ctx)
 	ctx1 := setWorkflowEnvOptionsIfNotExist(ctx)
 	options := getWorkflowEnvOptions(ctx1)

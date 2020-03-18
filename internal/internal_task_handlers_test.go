@@ -41,6 +41,8 @@ import (
 	"go.temporal.io/temporal-proto/enums"
 	"go.temporal.io/temporal-proto/workflowservice"
 	"go.temporal.io/temporal-proto/workflowservicemock"
+
+	"go.temporal.io/temporal/internal/common"
 )
 
 const (
@@ -249,7 +251,7 @@ func createWorkflowTaskWithQueries(
 		History:                &commonproto.History{Events: eventsCopy},
 		WorkflowExecution: &commonproto.WorkflowExecution{
 			WorkflowId: "fake-workflow-id",
-			RunId:      uuid.New(),
+			RunId:      common.UUID(uuid.NewRandom()),
 		},
 		Queries: queries,
 	}
@@ -422,7 +424,7 @@ func (t *TaskHandlersTestSuite) TestWorkflowTask_QueryWorkflow_Sticky() {
 	taskList := "sticky-tl"
 	execution := &commonproto.WorkflowExecution{
 		WorkflowId: "fake-workflow-id",
-		RunId:      uuid.New(),
+		RunId:      common.UUID(uuid.NewRandom()),
 	}
 	testEvents := []*commonproto.HistoryEvent{
 		createTestEventWorkflowExecutionStarted(1, &commonproto.WorkflowExecutionStartedEventAttributes{TaskList: &commonproto.TaskList{Name: taskList}}),
@@ -859,9 +861,9 @@ func (t *TaskHandlersTestSuite) TestWorkflowTask_WorkflowPanics() {
 func (t *TaskHandlersTestSuite) TestGetWorkflowInfo() {
 	taskList := "taskList"
 	parentID := "parentID"
-	parentRunID := "parentRun"
+	parentRunID := common.UUID(uuid.NewRandom())
 	cronSchedule := "5 4 * * *"
-	continuedRunID := uuid.New()
+	continuedRunID := common.UUID(uuid.NewRandom())
 	parentExecution := &commonproto.WorkflowExecution{
 		WorkflowId: parentID,
 		RunId:      parentRunID,
@@ -1307,7 +1309,7 @@ func (t *TaskHandlersTestSuite) TestActivityExecutionDeadline() {
 			TaskToken: []byte("token"),
 			WorkflowExecution: &commonproto.WorkflowExecution{
 				WorkflowId: "wID",
-				RunId:      "rID"},
+				RunId:      common.UUID(uuid.NewRandom())},
 			ActivityType:                  &commonproto.ActivityType{Name: "test"},
 			ActivityId:                    uuid.New(),
 			ScheduledTimestamp:            d.ScheduleTS.UnixNano(),
@@ -1362,7 +1364,7 @@ func (t *TaskHandlersTestSuite) TestActivityExecutionWorkerStop() {
 		TaskToken: []byte("token"),
 		WorkflowExecution: &commonproto.WorkflowExecution{
 			WorkflowId: "wID",
-			RunId:      "rID"},
+			RunId:      common.UUID(uuid.NewRandom())},
 		ActivityType:                  &commonproto.ActivityType{Name: "test"},
 		ActivityId:                    uuid.New(),
 		ScheduledTimestamp:            time.Now().UnixNano(),

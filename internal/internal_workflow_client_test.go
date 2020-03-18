@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
 	commonproto "go.temporal.io/temporal-proto/common"
 	"go.temporal.io/temporal-proto/enums"
@@ -37,18 +38,22 @@ import (
 	"go.temporal.io/temporal-proto/workflowservice"
 	"go.temporal.io/temporal-proto/workflowservicemock"
 
+	"go.temporal.io/temporal/internal/common"
 	"go.temporal.io/temporal/internal/common/metrics"
 )
 
 const (
 	workflowID            = "some random workflow ID"
 	workflowType          = "some random workflow type"
-	runID                 = "some random run ID"
 	tasklist              = "some random tasklist"
 	identity              = "some random identity"
 	timeoutInSeconds      = 20
 	workflowIDReusePolicy = WorkflowIDReusePolicyAllowDuplicateFailedOnly
 	testHeader            = "test-header"
+)
+
+var (
+	runID = common.MustParseUUID("deadbeef-c001-face-0000-000000000000")
 )
 
 // historyEventIteratorSuite
@@ -628,7 +633,7 @@ func (s *workflowRunSuite) TestExecuteWorkflow_NoDup_ContinueAsNew() {
 	}
 	s.workflowServiceClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any(), gomock.Any()).Return(createResponse, nil).Times(1)
 
-	newRunID := "some other random run ID"
+	newRunID := common.UUID(uuid.NewRandom())
 	filterType := enums.HistoryEventFilterTypeCloseEvent
 	eventType1 := enums.EventTypeWorkflowExecutionContinuedAsNew
 	getRequest1 := getGetWorkflowExecutionHistoryRequest(filterType)
@@ -785,12 +790,12 @@ func (s *workflowClientTestSuite) TestSignalWithStartWorkflow() {
 	resp, err := s.client.SignalWithStartWorkflow(context.Background(), workflowID, signalName, signalInput,
 		options, workflowType)
 	s.Nil(err)
-	s.Equal(createResponse.GetRunId(), resp.RunID)
+	s.EqualValues(createResponse.GetRunId(), resp.RunID)
 
 	resp, err = s.client.SignalWithStartWorkflow(context.Background(), "", signalName, signalInput,
 		options, workflowType)
 	s.Nil(err)
-	s.Equal(createResponse.GetRunId(), resp.RunID)
+	s.EqualValues(createResponse.GetRunId(), resp.RunID)
 }
 
 func (s *workflowClientTestSuite) TestSignalWithStartWorkflow_Error() {
@@ -817,7 +822,7 @@ func (s *workflowClientTestSuite) TestSignalWithStartWorkflow_Error() {
 	resp, err = s.client.SignalWithStartWorkflow(context.Background(), workflowID, signalName, signalInput,
 		options, workflowType)
 	s.Nil(err)
-	s.Equal(createResponse.GetRunId(), resp.RunID)
+	s.EqualValues(createResponse.GetRunId(), resp.RunID)
 }
 
 func (s *workflowClientTestSuite) TestStartWorkflow() {
@@ -841,7 +846,7 @@ func (s *workflowClientTestSuite) TestStartWorkflow() {
 	resp, err := client.StartWorkflow(context.Background(), options, f1, []byte("test"))
 	s.Equal(getDefaultDataConverter(), client.dataConverter)
 	s.Nil(err)
-	s.Equal(createResponse.GetRunId(), resp.RunID)
+	s.EqualValues(createResponse.GetRunId(), resp.RunID)
 }
 
 func (s *workflowClientTestSuite) TestStartWorkflow_WithContext() {
@@ -872,7 +877,7 @@ func (s *workflowClientTestSuite) TestStartWorkflow_WithContext() {
 
 	resp, err := client.StartWorkflow(context.Background(), options, f1, []byte("test"))
 	s.Nil(err)
-	s.Equal(createResponse.GetRunId(), resp.RunID)
+	s.EqualValues(createResponse.GetRunId(), resp.RunID)
 }
 
 func (s *workflowClientTestSuite) TestStartWorkflow_WithDataConverter() {
@@ -907,7 +912,7 @@ func (s *workflowClientTestSuite) TestStartWorkflow_WithDataConverter() {
 	resp, err := client.StartWorkflow(context.Background(), options, f1, input)
 	s.Equal(newTestDataConverter(), client.dataConverter)
 	s.Nil(err)
-	s.Equal(createResponse.GetRunId(), resp.RunID)
+	s.EqualValues(createResponse.GetRunId(), resp.RunID)
 }
 
 func (s *workflowClientTestSuite) TestStartWorkflow_WithMemoAndSearchAttr() {

@@ -36,6 +36,8 @@ import (
 	"go.temporal.io/temporal-proto/workflowservicemock"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+
+	"go.temporal.io/temporal/internal/common"
 )
 
 // ActivityTaskHandler never returns response
@@ -139,7 +141,7 @@ func (s *WorkersTestSuite) TestActivityWorkerStop() {
 		TaskToken: []byte("token"),
 		WorkflowExecution: &commonproto.WorkflowExecution{
 			WorkflowId: "wID",
-			RunId:      "rID"},
+			RunId:      common.UUID(uuid.NewRandom())},
 		ActivityType:                  &commonproto.ActivityType{Name: "test"},
 		ActivityId:                    uuid.New(),
 		ScheduledTimestamp:            time.Now().UnixNano(),
@@ -276,7 +278,7 @@ func (s *WorkersTestSuite) TestLongRunningDecisionTask() {
 		TaskToken: []byte("test-token"),
 		WorkflowExecution: &commonproto.WorkflowExecution{
 			WorkflowId: "long-running-decision-workflow-id",
-			RunId:      "long-running-decision-workflow-run-id",
+			RunId:      common.UUID(uuid.NewRandom()),
 		},
 		WorkflowType: &commonproto.WorkflowType{
 			Name: "long-running-decision-workflow-type",
@@ -412,7 +414,7 @@ func (s *WorkersTestSuite) TestMultipleLocalActivities() {
 		TaskToken: []byte("test-token"),
 		WorkflowExecution: &commonproto.WorkflowExecution{
 			WorkflowId: "multiple-local-activities-workflow-id",
-			RunId:      "multiple-local-activities-workflow-run-id",
+			RunId:      common.UUID(uuid.NewRandom()),
 		},
 		WorkflowType: &commonproto.WorkflowType{
 			Name: "multiple-local-activities-workflow-type",

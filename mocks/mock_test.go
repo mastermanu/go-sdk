@@ -24,6 +24,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -31,12 +32,13 @@ import (
 	"go.temporal.io/temporal-proto/enums"
 
 	"go.temporal.io/temporal/client"
+	"go.temporal.io/temporal/internal/common"
 	"go.temporal.io/temporal/workflow"
 )
 
 func Test_MockClient(t *testing.T) {
 	testWorkflowID := "test-workflowid"
-	testRunID := "test-runid"
+	testRunID := common.UUID(uuid.NewRandom())
 	testWorkflowName := "workflow"
 	testWorkflowInput := "input"
 
