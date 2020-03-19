@@ -41,6 +41,7 @@ import (
 
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/golang/mock/gomock"
+	guuid "github.com/google/uuid"
 	"github.com/opentracing/opentracing-go"
 	"github.com/pborman/uuid"
 	"github.com/uber-go/tally"
@@ -1176,8 +1177,17 @@ func (aw *WorkflowReplayer) ReplayPartialWorkflowHistoryFromJSONFile(logger *zap
 
 // ReplayWorkflowExecution replays workflow execution loading it from Temporal service.
 func (aw *WorkflowReplayer) ReplayWorkflowExecution(ctx context.Context, service workflowservice.WorkflowServiceClient, logger *zap.Logger, domain string, execution WorkflowExecution) error {
+	var parsedRunID guuid.UUID
+	var err0 error
+	if len(execution.RunID) != 0 {
+		parsedRunID, err0 = guuid.Parse(execution.RunID)
+		if err0 != nil {
+			return fmt.Errorf(invalidRunIDErrFormat, err0)
+		}
+	}
+
 	sharedExecution := &commonproto.WorkflowExecution{
-		RunId:      execution.RunID,
+		RunId:      parsedRunID[:],
 		WorkflowId: execution.ID,
 	}
 	request := &workflowservice.GetWorkflowExecutionHistoryRequest{
@@ -1213,10 +1223,10 @@ func (aw *WorkflowReplayer) replayWorkflowHistory(logger *zap.Logger, service wo
 	}
 	workflowType := attr.WorkflowType
 	execution := &commonproto.WorkflowExecution{
-		RunId:      uuid.NewRandom().String(),
+		RunId:      uuid.NewRandom(),
 		WorkflowId: "ReplayId",
 	}
-	if first.GetWorkflowExecutionStartedEventAttributes().GetOriginalExecutionRunId() != "" {
+	if first.GetWorkflowExecutionStartedEventAttributes().GetOriginalExecutionRunId() != nil {
 		execution.RunId = first.GetWorkflowExecutionStartedEventAttributes().GetOriginalExecutionRunId()
 	}
 

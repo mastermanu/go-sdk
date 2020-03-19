@@ -29,6 +29,7 @@ import (
 	"reflect"
 	"time"
 
+	guuid "github.com/google/uuid"
 	"github.com/opentracing/opentracing-go"
 	"github.com/pborman/uuid"
 	"github.com/uber-go/tally"
@@ -247,7 +248,7 @@ func (wc *WorkflowClient) StartWorkflow(
 
 	executionInfo := &WorkflowExecution{
 		ID:    workflowID,
-		RunID: response.GetRunId()}
+		RunID: common.UUIDString(response.GetRunId())}
 	return executionInfo, nil
 }
 
@@ -269,7 +270,7 @@ func (wc *WorkflowClient) ExecuteWorkflow(ctx context.Context, options StartWork
 	executionInfo, err := wc.StartWorkflow(ctx, options, workflow, args...)
 	if err != nil {
 		if e, ok := err.(*serviceerror.WorkflowExecutionAlreadyStarted); ok {
-			runID = e.RunId
+			runID = common.UUIDString(e.RunId)
 			workflowID = options.ID
 		} else {
 			return nil, err
@@ -321,11 +322,20 @@ func (wc *WorkflowClient) SignalWorkflow(ctx context.Context, workflowID string,
 		return err
 	}
 
+	var parsedRunID guuid.UUID
+	var err0 error
+	if len(runID) != 0 {
+		parsedRunID, err0 = guuid.Parse(runID)
+		if err0 != nil {
+			return fmt.Errorf(invalidRunIDErrFormat, err0)
+		}
+	}
+
 	request := &workflowservice.SignalWorkflowExecutionRequest{
 		Domain: wc.domain,
 		WorkflowExecution: &commonproto.WorkflowExecution{
 			WorkflowId: workflowID,
-			RunId:      runID,
+			RunId:      parsedRunID[:],
 		},
 		SignalName: signalName,
 		Input:      input,
@@ -439,7 +449,7 @@ func (wc *WorkflowClient) SignalWithStartWorkflow(ctx context.Context, workflowI
 
 	executionInfo := &WorkflowExecution{
 		ID:    options.ID,
-		RunID: response.GetRunId()}
+		RunID: common.UUIDString(response.GetRunId())}
 	return executionInfo, nil
 }
 
@@ -447,11 +457,20 @@ func (wc *WorkflowClient) SignalWithStartWorkflow(ctx context.Context, workflowI
 // workflowID is required, other parameters are optional.
 // If runID is omit, it will terminate currently running workflow (if there is one) based on the workflowID.
 func (wc *WorkflowClient) CancelWorkflow(ctx context.Context, workflowID string, runID string) error {
+	var parsedRunID guuid.UUID
+	var err0 error
+	if len(runID) != 0 {
+		parsedRunID, err0 = guuid.Parse(runID)
+		if err0 != nil {
+			return fmt.Errorf(invalidRunIDErrFormat, err0)
+		}
+	}
+
 	request := &workflowservice.RequestCancelWorkflowExecutionRequest{
 		Domain: wc.domain,
 		WorkflowExecution: &commonproto.WorkflowExecution{
 			WorkflowId: workflowID,
-			RunId:      runID,
+			RunId:      parsedRunID[:],
 		},
 		Identity: wc.identity,
 	}
@@ -469,11 +488,19 @@ func (wc *WorkflowClient) CancelWorkflow(ctx context.Context, workflowID string,
 // workflowID is required, other parameters are optional.
 // If runID is omit, it will terminate currently running workflow (if there is one) based on the workflowID.
 func (wc *WorkflowClient) TerminateWorkflow(ctx context.Context, workflowID string, runID string, reason string, details []byte) error {
+	var parsedRunID guuid.UUID
+	var err0 error
+	if len(runID) != 0 {
+		parsedRunID, err0 = guuid.Parse(runID)
+		if err0 != nil {
+			return fmt.Errorf(invalidRunIDErrFormat, err0)
+		}
+	}
 	request := &workflowservice.TerminateWorkflowExecutionRequest{
 		Domain: wc.domain,
 		WorkflowExecution: &commonproto.WorkflowExecution{
 			WorkflowId: workflowID,
-			RunId:      runID,
+			RunId:      parsedRunID[:],
 		},
 		Reason:   reason,
 		Identity: wc.identity,
@@ -496,12 +523,22 @@ func (wc *WorkflowClient) GetWorkflowHistory(ctx context.Context, workflowID str
 	isLongPoll bool, filterType enums.HistoryEventFilterType) HistoryEventIterator {
 
 	domain := wc.domain
+
 	paginate := func(nexttoken []byte) (*workflowservice.GetWorkflowExecutionHistoryResponse, error) {
+		var parsedRunID guuid.UUID
+		var err0 error
+		if len(runID) != 0 {
+			parsedRunID, err0 = guuid.Parse(runID)
+			if err0 != nil {
+				return nil, fmt.Errorf(invalidRunIDErrFormat, err0)
+			}
+		}
+
 		request := &workflowservice.GetWorkflowExecutionHistoryRequest{
 			Domain: domain,
 			Execution: &commonproto.WorkflowExecution{
 				WorkflowId: workflowID,
-				RunId:      runID,
+				RunId:      parsedRunID[:],
 			},
 			WaitForNewEvent:        isLongPoll,
 			HistoryEventFilterType: filterType,
@@ -509,10 +546,9 @@ func (wc *WorkflowClient) GetWorkflowHistory(ctx context.Context, workflowID str
 		}
 
 		var response *workflowservice.GetWorkflowExecutionHistoryResponse
-		var err error
 	Loop:
 		for {
-			err = backoff.Retry(ctx,
+			err := backoff.Retry(ctx,
 				func() error {
 					var err1 error
 					tchCtx, cancel := newChannelContext(ctx, func(builder *contextBuilder) {
@@ -573,6 +609,15 @@ func (wc *WorkflowClient) CompleteActivityByID(ctx context.Context, domain, work
 		return errors.New("empty activity or workflow id or domainName")
 	}
 
+	var parsedRunID guuid.UUID
+	var err0 error
+	if len(runID) != 0 {
+		parsedRunID, err0 = guuid.Parse(runID)
+		if err0 != nil {
+			return fmt.Errorf(invalidRunIDErrFormat, err0)
+		}
+	}
+
 	var data []byte
 	if result != nil {
 		var err0 error
@@ -582,7 +627,7 @@ func (wc *WorkflowClient) CompleteActivityByID(ctx context.Context, domain, work
 		}
 	}
 
-	request := convertActivityResultToRespondRequestByID(wc.identity, domain, workflowID, runID, activityID, data, err, wc.dataConverter)
+	request := convertActivityResultToRespondRequestByID(wc.identity, domain, workflowID, parsedRunID[:], activityID, data, err, wc.dataConverter)
 	return reportActivityCompleteByID(ctx, wc.workflowService, request, wc.metricsScope)
 }
 
@@ -602,7 +647,15 @@ func (wc *WorkflowClient) RecordActivityHeartbeatByID(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	return recordActivityHeartbeatByID(ctx, wc.workflowService, wc.identity, domain, workflowID, runID, activityID, data)
+	var parsedRunID guuid.UUID
+	var err0 error
+	if len(runID) != 0 {
+		parsedRunID, err0 = guuid.Parse(runID)
+		if err0 != nil {
+			return fmt.Errorf(invalidRunIDErrFormat, err0)
+		}
+	}
+	return recordActivityHeartbeatByID(ctx, wc.workflowService, wc.identity, domain, workflowID, parsedRunID[:], activityID, data)
 }
 
 // ListClosedWorkflow gets closed workflow executions based on request filters
@@ -768,11 +821,19 @@ func (wc *WorkflowClient) GetSearchAttributes(ctx context.Context) (*workflowser
 //  - InternalServiceError
 //  - EntityNotExistError
 func (wc *WorkflowClient) DescribeWorkflowExecution(ctx context.Context, workflowID, runID string) (*workflowservice.DescribeWorkflowExecutionResponse, error) {
+	var parsedRunID guuid.UUID
+	var err0 error
+	if len(runID) != 0 {
+		parsedRunID, err0 = guuid.Parse(runID)
+		if err0 != nil {
+			return nil, fmt.Errorf(invalidRunIDErrFormat, err0)
+		}
+	}
 	request := &workflowservice.DescribeWorkflowExecutionRequest{
 		Domain: wc.domain,
 		Execution: &commonproto.WorkflowExecution{
 			WorkflowId: workflowID,
-			RunId:      runID,
+			RunId:      parsedRunID[:],
 		},
 	}
 	var response *workflowservice.DescribeWorkflowExecutionResponse
@@ -870,11 +931,21 @@ func (wc *WorkflowClient) QueryWorkflowWithOptions(ctx context.Context, request 
 			return nil, err
 		}
 	}
+
+	var parsedRunID guuid.UUID
+	var err0 error
+	if len(request.RunID) != 0 {
+		parsedRunID, err0 = guuid.Parse(request.RunID)
+		if err0 != nil {
+			return nil, fmt.Errorf(invalidRunIDErrFormat, err0)
+		}
+	}
+
 	req := &workflowservice.QueryWorkflowRequest{
 		Domain: wc.domain,
 		Execution: &commonproto.WorkflowExecution{
 			WorkflowId: request.WorkflowID,
-			RunId:      request.RunID,
+			RunId:      parsedRunID[:],
 		},
 		Query: &commonproto.WorkflowQuery{
 			QueryType: request.QueryType,
@@ -1119,7 +1190,7 @@ func (workflowRun *workflowRunImpl) Get(ctx context.Context, valuePtr interface{
 		err = NewTimeoutError(attributes.GetTimeoutType())
 	case enums.EventTypeWorkflowExecutionContinuedAsNew:
 		attributes := closeEvent.GetWorkflowExecutionContinuedAsNewEventAttributes()
-		workflowRun.currentRunID = attributes.GetNewExecutionRunId()
+		workflowRun.currentRunID = common.UUIDString(attributes.GetNewExecutionRunId())
 		return workflowRun.Get(ctx, valuePtr)
 	default:
 		err = fmt.Errorf("unexpected event type %s when handling workflow execution result", closeEvent.GetEventType())

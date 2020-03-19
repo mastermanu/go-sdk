@@ -11,7 +11,7 @@ require (
 	github.com/golang/mock v1.4.3
 	github.com/golang/protobuf v1.3.5 // indirect
 	github.com/google/go-cmp v0.4.0 // indirect
-	github.com/google/uuid v1.1.1 // indirect
+	github.com/google/uuid v1.1.1
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
@@ -22,10 +22,11 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/stretchr/testify v1.5.1
+	github.com/temporalio/temporal-proto v0.0.0-20200318074711-d612ad44c885
 	github.com/uber-go/tally v3.3.15+incompatible
 	github.com/uber/jaeger-client-go v2.22.1+incompatible
 	github.com/uber/jaeger-lib v2.2.0+incompatible // indirect
-	go.temporal.io/temporal-proto v0.0.0-20200316214407-583dbd3e3b32
+	go.temporal.io/temporal-proto v0.0.0-20200318074933-b95bf3d99717
 	go.uber.org/atomic v1.6.0
 	go.uber.org/goleak v1.0.0
 	go.uber.org/zap v1.14.1

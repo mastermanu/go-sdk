@@ -27,6 +27,7 @@ import (
 	commonproto "go.temporal.io/temporal-proto/common"
 	"go.temporal.io/temporal-proto/enums"
 
+	"go.temporal.io/temporal/internal/common"
 	"go.temporal.io/temporal/internal/common/util"
 )
 
@@ -841,7 +842,7 @@ func (h *decisionsHelper) handleStartChildWorkflowExecutionFailed(workflowID str
 	return decision
 }
 
-func (h *decisionsHelper) requestCancelExternalWorkflowExecution(domain, workflowID, runID string, cancellationID string, childWorkflowOnly bool) decisionStateMachine {
+func (h *decisionsHelper) requestCancelExternalWorkflowExecution(domain, workflowID string, runID common.UUID, cancellationID string, childWorkflowOnly bool) decisionStateMachine {
 	if childWorkflowOnly {
 		// For cancellation of child workflow only, we do not use cancellation ID
 		// since the child workflow cancellation go through the existing child workflow
@@ -928,7 +929,7 @@ func (h *decisionsHelper) handleRequestCancelExternalWorkflowExecutionFailed(ini
 	return isExternal, decision
 }
 
-func (h *decisionsHelper) signalExternalWorkflowExecution(domain, workflowID, runID, signalName string, input []byte, signalID string, childWorkflowOnly bool) decisionStateMachine {
+func (h *decisionsHelper) signalExternalWorkflowExecution(domain, workflowID string, runID common.UUID, signalName string, input []byte, signalID string, childWorkflowOnly bool) decisionStateMachine {
 	attributes := &commonproto.SignalExternalWorkflowExecutionDecisionAttributes{
 		Domain: domain,
 		Execution: &commonproto.WorkflowExecution{

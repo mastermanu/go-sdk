@@ -31,7 +31,9 @@ import (
 
 	"github.com/facebookgo/clock"
 	"github.com/golang/mock/gomock"
+	guuid "github.com/google/uuid"
 	"github.com/opentracing/opentracing-go"
+	uuid "github.com/pborman/uuid"
 	"github.com/robfig/cron"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
@@ -51,7 +53,7 @@ const (
 	defaultTestDomain           = "default-test-domain"
 	defaultTestTaskList         = "default-test-tasklist"
 	defaultTestWorkflowID       = "default-test-workflow-id"
-	defaultTestRunID            = "default-test-run-id"
+	defaultTestRunID            = "deadbeef-c001-face-0000-000000000001"
 	defaultTestWorkflowTypeName = "default-test-workflow-type-name"
 	defaultTestDomainName       = "default-test-domain-name"
 	workflowTypeNotSpecified    = "workflow-type-not-specified"
@@ -343,7 +345,7 @@ func (env *testWorkflowEnvironmentImpl) newTestWorkflowEnvironmentForChild(param
 	// set workflow info data for child workflow
 	childEnv.workflowInfo.Attempt = params.attempt
 	childEnv.workflowInfo.WorkflowExecution.ID = params.workflowID
-	childEnv.workflowInfo.WorkflowExecution.RunID = params.workflowID + "_RunID"
+	childEnv.workflowInfo.WorkflowExecution.RunID = uuid.New()
 	childEnv.workflowInfo.Domain = params.domain
 	childEnv.workflowInfo.TaskListName = params.taskListName
 	childEnv.workflowInfo.ExecutionStartToCloseTimeoutSeconds = params.executionStartToCloseTimeoutSeconds
@@ -356,13 +358,13 @@ func (env *testWorkflowEnvironmentImpl) newTestWorkflowEnvironmentForChild(param
 	if workflowHandler, ok := env.runningWorkflows[params.workflowID]; ok {
 		// duplicate workflow ID
 		if !workflowHandler.handled {
-			return nil, serviceerror.NewWorkflowExecutionAlreadyStarted("Workflow execution already started", "", "")
+			return nil, serviceerror.NewWorkflowExecutionAlreadyStarted("Workflow execution already started", "", nil)
 		}
 		if params.workflowIDReusePolicy == WorkflowIDReusePolicyRejectDuplicate {
-			return nil, serviceerror.NewWorkflowExecutionAlreadyStarted("Workflow execution already started", "", "")
+			return nil, serviceerror.NewWorkflowExecutionAlreadyStarted("Workflow execution already started", "", nil)
 		}
 		if workflowHandler.err == nil && params.workflowIDReusePolicy == WorkflowIDReusePolicyAllowDuplicateFailedOnly {
-			return nil, serviceerror.NewWorkflowExecutionAlreadyStarted("Workflow execution already started", "", "")
+			return nil, serviceerror.NewWorkflowExecutionAlreadyStarted("Workflow execution already started", "", nil)
 		}
 	}
 
@@ -1557,10 +1559,11 @@ func (env *testWorkflowEnvironmentImpl) newTestActivityTaskHandler(taskList stri
 }
 
 func newTestActivityTask(workflowID, runID, activityID, workflowTypeName, domainName string, params executeActivityParams) *workflowservice.PollForActivityTaskResponse {
+	parsedRunID := guuid.MustParse(runID)
 	task := &workflowservice.PollForActivityTaskResponse{
 		WorkflowExecution: &commonproto.WorkflowExecution{
 			WorkflowId: workflowID,
-			RunId:      runID,
+			RunId:      parsedRunID[:],
 		},
 		ActivityId:                    activityID,
 		TaskToken:                     []byte(activityID), // use activityID as TaskToken so we can map TaskToken in heartbeat calls.
@@ -1656,7 +1659,7 @@ func (env *testWorkflowEnvironmentImpl) RequestCancelChildWorkflow(_, workflowID
 	}
 }
 
-func (env *testWorkflowEnvironmentImpl) RequestCancelExternalWorkflow(domainName, workflowID, runID string, callback resultHandler) {
+func (env *testWorkflowEnvironmentImpl) RequestCancelExternalWorkflow(domainName, workflowID string, runID common.UUID, callback resultHandler) {
 	if env.workflowInfo.WorkflowExecution.ID == workflowID {
 		// cancel current workflow
 		env.workflowCancelHandler()
@@ -1708,7 +1711,7 @@ func (env *testWorkflowEnvironmentImpl) IsReplaying() bool {
 	return false
 }
 
-func (env *testWorkflowEnvironmentImpl) SignalExternalWorkflow(domainName, workflowID, runID, signalName string, input []byte, arg interface{}, childWorkflowOnly bool, callback resultHandler) {
+func (env *testWorkflowEnvironmentImpl) SignalExternalWorkflow(domainName, workflowID string, runID common.UUID, signalName string, input []byte, arg interface{}, childWorkflowOnly bool, callback resultHandler) {
 	// check if target workflow is a known workflow
 	if childHandle, ok := env.runningWorkflows[workflowID]; ok {
 		// target workflow is a child
@@ -1893,11 +1896,12 @@ func (env *testWorkflowEnvironmentImpl) getActivityInfo(activityID, activityType
 
 func (env *testWorkflowEnvironmentImpl) cancelWorkflow(callback resultHandler) {
 	env.postCallback(func() {
+		parsedRunID := guuid.MustParse(env.workflowInfo.WorkflowExecution.RunID)
 		// RequestCancelWorkflow needs to be run in main thread
 		env.RequestCancelExternalWorkflow(
 			env.workflowInfo.Domain,
 			env.workflowInfo.WorkflowExecution.ID,
-			env.workflowInfo.WorkflowExecution.RunID,
+			parsedRunID[:],
 			callback,
 		)
 	}, true)
@@ -1996,12 +2000,12 @@ func (t *testSessionEnvironmentImpl) SignalCreationResponse(_ context.Context, s
 }
 
 // function signature for mock SignalExternalWorkflow
-func mockFnSignalExternalWorkflow(string, string, string, string, interface{}) error {
+func mockFnSignalExternalWorkflow(string, string, common.UUID, string, interface{}) error {
 	return nil
 }
 
 // function signature for mock RequestCancelExternalWorkflow
-func mockFnRequestCancelExternalWorkflow(string, string, string) error {
+func mockFnRequestCancelExternalWorkflow(string, string, common.UUID) error {
 	return nil
 }
 

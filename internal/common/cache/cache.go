@@ -22,30 +22,32 @@ package cache
 
 import (
 	"time"
+
+	"go.temporal.io/temporal/internal/common"
 )
 
 // A Cache is a generalized interface to a cache.  See cache.LRU for a specific
 // implementation (bounded cache with LRU eviction)
 type Cache interface {
 	// Exist checks if a given key exists in the cache
-	Exist(key string) bool
+	Exist(key common.UUID) bool
 
 	// Get retrieves an element based on a key, returning nil if the element
 	// does not exist
-	Get(key string) interface{}
+	Get(key common.UUID) interface{}
 
 	// Put adds an element to the cache, returning the previous element
-	Put(key string, value interface{}) interface{}
+	Put(key common.UUID, value interface{}) interface{}
 
 	// PutIfNotExist puts a value associated with a given key if it does not exist
-	PutIfNotExist(key string, value interface{}) (interface{}, error)
+	PutIfNotExist(key common.UUID, value interface{}) (interface{}, error)
 
 	// Delete deletes an element in the cache
-	Delete(key string)
+	Delete(key common.UUID)
 
 	// Release decrements the ref count of a pinned element. If the ref count
 	// drops to 0, the element can be evicted from the cache.
-	Release(key string)
+	Release(key common.UUID)
 
 	// Size returns the number of entries currently stored in the Cache
 	Size() int

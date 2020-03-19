@@ -271,17 +271,17 @@ func (wc *workflowEnvironmentImpl) Complete(result []byte, err error) {
 
 func (wc *workflowEnvironmentImpl) RequestCancelChildWorkflow(domainName string, workflowID string) {
 	// For cancellation of child workflow only, we do not use cancellation ID and run ID
-	wc.decisionsHelper.requestCancelExternalWorkflowExecution(domainName, workflowID, "", "", true)
+	wc.decisionsHelper.requestCancelExternalWorkflowExecution(domainName, workflowID, nil, "", true)
 }
 
-func (wc *workflowEnvironmentImpl) RequestCancelExternalWorkflow(domainName, workflowID, runID string, callback resultHandler) {
+func (wc *workflowEnvironmentImpl) RequestCancelExternalWorkflow(domainName, workflowID string, runID common.UUID, callback resultHandler) {
 	// for cancellation of external workflow, we have to use cancellation ID and set isChildWorkflowOnly to false
 	cancellationID := wc.GenerateSequenceID()
 	decision := wc.decisionsHelper.requestCancelExternalWorkflowExecution(domainName, workflowID, runID, cancellationID, false)
 	decision.setData(&scheduledCancellation{callback: callback})
 }
 
-func (wc *workflowEnvironmentImpl) SignalExternalWorkflow(domainName, workflowID, runID, signalName string,
+func (wc *workflowEnvironmentImpl) SignalExternalWorkflow(domainName, workflowID string, runID common.UUID, signalName string,
 	input []byte, _ /* THIS IS FOR TEST FRAMEWORK. DO NOT USE HERE. */ interface{}, childWorkflowOnly bool, callback resultHandler) {
 
 	signalID := wc.GenerateSequenceID()
@@ -1157,7 +1157,7 @@ func (weh *workflowExecutionEventHandlerImpl) handleStartChildWorkflowExecutionF
 		return nil
 	}
 
-	err := serviceerror.NewWorkflowExecutionAlreadyStarted("Workflow execution already started", "", "")
+	err := serviceerror.NewWorkflowExecutionAlreadyStarted("Workflow execution already started", "", nil)
 	childWorkflow.handle(nil, err)
 
 	return nil
@@ -1166,7 +1166,7 @@ func (weh *workflowExecutionEventHandlerImpl) handleStartChildWorkflowExecutionF
 func (weh *workflowExecutionEventHandlerImpl) handleChildWorkflowExecutionStarted(event *commonproto.HistoryEvent) error {
 	attributes := event.GetChildWorkflowExecutionStartedEventAttributes()
 	childWorkflowID := attributes.WorkflowExecution.GetWorkflowId()
-	childRunID := attributes.WorkflowExecution.GetRunId()
+	childRunID := common.UUIDString(attributes.WorkflowExecution.GetRunId())
 	decision := weh.decisionsHelper.handleChildWorkflowExecutionStarted(childWorkflowID)
 	childWorkflow := decision.getData().(*scheduledChildWorkflow)
 	if childWorkflow.handled {

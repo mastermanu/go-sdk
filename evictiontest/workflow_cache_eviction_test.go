@@ -33,6 +33,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/test/custom"
 	"github.com/golang/mock/gomock"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
@@ -115,7 +116,8 @@ func (s *CacheEvictionSuite) TestResetStickyOnEviction() {
 	) (success *workflowservice.PollForDecisionTaskResponse, err error) {
 		taskID := taskCounter.Inc()
 		workflowID := "testID" + strconv.Itoa(int(taskID))
-		runID := "runID" + strconv.Itoa(int(taskID))
+		runID := make([]byte, 16)
+		custom.PutLittleEndianUint64(runID, 0, uint64(taskID))
 		// how we initialize the response here is the result of a series of trial and error
 		// the goal is we want to fabricate a response that looks real enough to our worker
 		// that it will actually go along with processing it instead of just tossing it out

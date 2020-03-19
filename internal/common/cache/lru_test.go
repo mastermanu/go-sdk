@@ -31,45 +31,45 @@ import (
 func TestLRU(t *testing.T) {
 	cache := NewLRU(5)
 
-	cache.Put("A", "Foo")
-	assert.Equal(t, "Foo", cache.Get("A"))
-	assert.Nil(t, cache.Get("B"))
+	cache.Put([]byte("A"), "Foo")
+	assert.Equal(t, "Foo", cache.Get([]byte("A")))
+	assert.Nil(t, cache.Get([]byte("B")))
 	assert.Equal(t, 1, cache.Size())
 
-	cache.Put("B", "Bar")
-	cache.Put("C", "Cid")
-	cache.Put("D", "Delt")
+	cache.Put([]byte("B"), "Bar")
+	cache.Put([]byte("C"), "Cid")
+	cache.Put([]byte("D"), "Delt")
 	assert.Equal(t, 4, cache.Size())
 
-	assert.Equal(t, "Bar", cache.Get("B"))
-	assert.Equal(t, "Cid", cache.Get("C"))
-	assert.Equal(t, "Delt", cache.Get("D"))
+	assert.Equal(t, "Bar", cache.Get([]byte("B")))
+	assert.Equal(t, "Cid", cache.Get([]byte("C")))
+	assert.Equal(t, "Delt", cache.Get([]byte("D")))
 
-	cache.Put("A", "Foo2")
-	assert.Equal(t, "Foo2", cache.Get("A"))
+	cache.Put([]byte("A"), "Foo2")
+	assert.Equal(t, "Foo2", cache.Get([]byte("A")))
 
-	cache.Put("E", "Epsi")
-	assert.Equal(t, "Epsi", cache.Get("E"))
-	assert.Equal(t, "Foo2", cache.Get("A"))
-	assert.Nil(t, cache.Get("B")) // Oldest, should be evicted
+	cache.Put([]byte("E"), "Epsi")
+	assert.Equal(t, "Epsi", cache.Get([]byte("E")))
+	assert.Equal(t, "Foo2", cache.Get([]byte("A")))
+	assert.Nil(t, cache.Get([]byte("B"))) // Oldest, should be evicted
 
 	// Access C, D is now LRU
-	cache.Get("C")
-	cache.Put("F", "Felp")
-	assert.Nil(t, cache.Get("D"))
+	cache.Get([]byte("C"))
+	cache.Put([]byte("F"), "Felp")
+	assert.Nil(t, cache.Get([]byte("D")))
 
-	cache.Delete("A")
-	assert.Nil(t, cache.Get("A"))
+	cache.Delete([]byte("A"))
+	assert.Nil(t, cache.Get([]byte("A")))
 }
 
 func TestLRUWithTTL(t *testing.T) {
 	cache := New(5, &Options{
 		TTL: time.Millisecond * 100,
 	})
-	cache.Put("A", "foo")
-	assert.Equal(t, "foo", cache.Get("A"))
+	cache.Put([]byte("A"), "foo")
+	assert.Equal(t, "foo", cache.Get([]byte("A")))
 	time.Sleep(time.Millisecond * 300)
-	assert.Nil(t, cache.Get("A"))
+	assert.Nil(t, cache.Get([]byte("A")))
 	assert.Equal(t, 0, cache.Size())
 }
 
@@ -84,7 +84,7 @@ func TestLRUCacheConcurrentAccess(t *testing.T) {
 	}
 
 	for k, v := range values {
-		cache.Put(k, v)
+		cache.Put([]byte(k), v)
 	}
 
 	start := make(chan struct{})
@@ -98,7 +98,7 @@ func TestLRUCacheConcurrentAccess(t *testing.T) {
 			<-start
 
 			for j := 0; j < 1000; j++ {
-				cache.Get("A")
+				cache.Get([]byte("A"))
 			}
 		}()
 	}
@@ -117,9 +117,9 @@ func TestRemoveFunc(t *testing.T) {
 		},
 	})
 
-	cache.Put("testing", t)
-	cache.Delete("testing")
-	assert.Nil(t, cache.Get("testing"))
+	cache.Put([]byte("testing"), t)
+	cache.Delete([]byte("testing"))
+	assert.Nil(t, cache.Get([]byte("testing")))
 
 	timeout := time.NewTimer(time.Millisecond * 300)
 	select {
@@ -141,10 +141,10 @@ func TestRemovedFuncWithTTL(t *testing.T) {
 		},
 	})
 
-	cache.Put("A", t)
-	assert.Equal(t, t, cache.Get("A"))
+	cache.Put([]byte("A"), t)
+	assert.Equal(t, t, cache.Get([]byte("A")))
 	time.Sleep(time.Millisecond * 100)
-	assert.Nil(t, cache.Get("A"))
+	assert.Nil(t, cache.Get([]byte("A")))
 
 	timeout := time.NewTimer(time.Millisecond * 300)
 	select {

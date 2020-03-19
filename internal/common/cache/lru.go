@@ -25,6 +25,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"go.temporal.io/temporal/internal/common"
 )
 
 var (
@@ -74,19 +76,19 @@ func NewLRUWithInitialCapacity(initialCapacity, maxSize int) Cache {
 }
 
 // Exist checks if a given key exists in the cache
-func (c *lru) Exist(key string) bool {
+func (c *lru) Exist(key common.UUID) bool {
 	c.mut.Lock()
 	defer c.mut.Unlock()
-	_, ok := c.byKey[key]
+	_, ok := c.byKey[string(key)]
 	return ok
 }
 
 // Get retrieves the value stored under the given key
-func (c *lru) Get(key string) interface{} {
+func (c *lru) Get(key common.UUID) interface{} {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
-	elt := c.byKey[key]
+	elt := c.byKey[string(key)]
 	if elt == nil {
 		return nil
 	}
@@ -103,7 +105,7 @@ func (c *lru) Get(key string) interface{} {
 			go c.rmFunc(cacheEntry.value)
 		}
 		c.byAccess.Remove(elt)
-		delete(c.byKey, cacheEntry.key)
+		delete(c.byKey, string(cacheEntry.key))
 		return nil
 	}
 
@@ -112,7 +114,7 @@ func (c *lru) Get(key string) interface{} {
 }
 
 // Put puts a new value associated with a given key, returning the existing value (if present)
-func (c *lru) Put(key string, value interface{}) interface{} {
+func (c *lru) Put(key common.UUID, value interface{}) interface{} {
 	if c.pin {
 		panic("Cannot use Put API in Pin mode. Use Delete and PutIfNotExist if necessary")
 	}
@@ -121,7 +123,7 @@ func (c *lru) Put(key string, value interface{}) interface{} {
 }
 
 // PutIfNotExist puts a value associated with a given key if it does not exist
-func (c *lru) PutIfNotExist(key string, value interface{}) (interface{}, error) {
+func (c *lru) PutIfNotExist(key common.UUID, value interface{}) (interface{}, error) {
 	existing, err := c.putInternal(key, value, false)
 	if err != nil {
 		return nil, err
@@ -136,26 +138,26 @@ func (c *lru) PutIfNotExist(key string, value interface{}) (interface{}, error) 
 }
 
 // Delete deletes a key, value pair associated with a key
-func (c *lru) Delete(key string) {
+func (c *lru) Delete(key common.UUID) {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
-	elt := c.byKey[key]
+	elt := c.byKey[string(key)]
 	if elt != nil {
 		entry := c.byAccess.Remove(elt).(*cacheEntry)
 		if c.rmFunc != nil {
 			go c.rmFunc(entry.value)
 		}
-		delete(c.byKey, key)
+		delete(c.byKey, string(key))
 	}
 }
 
 // Release decrements the ref count of a pinned element.
-func (c *lru) Release(key string) {
+func (c *lru) Release(key common.UUID) {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
-	elt := c.byKey[key]
+	elt := c.byKey[string(key)]
 	cacheEntry := elt.Value.(*cacheEntry)
 	cacheEntry.refCount--
 }
@@ -170,11 +172,11 @@ func (c *lru) Size() int {
 
 // Put puts a new value associated with a given key, returning the existing value (if present)
 // allowUpdate flag is used to control overwrite behavior if the value exists
-func (c *lru) putInternal(key string, value interface{}, allowUpdate bool) (interface{}, error) {
+func (c *lru) putInternal(key common.UUID, value interface{}, allowUpdate bool) (interface{}, error) {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 
-	elt := c.byKey[key]
+	elt := c.byKey[string(key)]
 	if elt != nil {
 		entry := elt.Value.(*cacheEntry)
 		existing := entry.value
@@ -204,7 +206,7 @@ func (c *lru) putInternal(key string, value interface{}, allowUpdate bool) (inte
 		entry.expiration = time.Now().Add(c.ttl)
 	}
 
-	c.byKey[key] = c.byAccess.PushFront(entry)
+	c.byKey[string(key)] = c.byAccess.PushFront(entry)
 	if len(c.byKey) == c.maxSize {
 		oldest := c.byAccess.Back().Value.(*cacheEntry)
 
@@ -212,7 +214,7 @@ func (c *lru) putInternal(key string, value interface{}, allowUpdate bool) (inte
 			// Cache is full with pinned elements
 			// revert the insert and return
 			c.byAccess.Remove(c.byAccess.Front())
-			delete(c.byKey, key)
+			delete(c.byKey, string(key))
 			return nil, ErrCacheFull
 		}
 
@@ -220,14 +222,14 @@ func (c *lru) putInternal(key string, value interface{}, allowUpdate bool) (inte
 		if c.rmFunc != nil {
 			go c.rmFunc(oldest.value)
 		}
-		delete(c.byKey, oldest.key)
+		delete(c.byKey, string(oldest.key))
 	}
 
 	return nil, nil
 }
 
 type cacheEntry struct {
-	key        string
+	key        common.UUID
 	expiration time.Time
 	value      interface{}
 	refCount   int

@@ -27,6 +27,8 @@ import (
 
 	commonproto "go.temporal.io/temporal-proto/common"
 	"go.temporal.io/temporal-proto/enums"
+
+	"go.temporal.io/temporal/internal/common"
 )
 
 func Test_TimerStateMachine_CancelBeforeSent(t *testing.T) {
@@ -341,7 +343,7 @@ func Test_ChildWorkflowStateMachine_CancelSucceed(t *testing.T) {
 	t.Parallel()
 	domain := "test-domain"
 	workflowID := "test-child-workflow"
-	runID := ""
+	var runID []byte
 	cancellationID := ""
 	initiatedEventID := int64(28)
 	attributes := &commonproto.StartChildWorkflowExecutionDecisionAttributes{
@@ -385,7 +387,7 @@ func Test_ChildWorkflowStateMachine_InvalidStates(t *testing.T) {
 	t.Parallel()
 	domain := "test-domain"
 	workflowID := "test-workflow-id"
-	runID := ""
+	var runID []byte
 	attributes := &commonproto.StartChildWorkflowExecutionDecisionAttributes{
 		WorkflowId: workflowID,
 	}
@@ -467,7 +469,7 @@ func Test_ChildWorkflowStateMachine_CancelFailed(t *testing.T) {
 	t.Parallel()
 	domain := "test-domain"
 	workflowID := "test-workflow-id"
-	runID := ""
+	var runID []byte
 	attributes := &commonproto.StartChildWorkflowExecutionDecisionAttributes{
 		WorkflowId: workflowID,
 	}
@@ -532,7 +534,7 @@ func Test_CancelExternalWorkflowStateMachine_Succeed(t *testing.T) {
 	t.Parallel()
 	domain := "test-domain"
 	workflowID := "test-workflow-id"
-	runID := "test-run-id"
+	runID := common.MustParseUUID("deadbeef-c001-face-0000-000000000001")
 	cancellationID := "1"
 	initiatedEventID := int64(28)
 	h := newDecisionsHelper()
@@ -578,7 +580,7 @@ func Test_CancelExternalWorkflowStateMachine_Failed(t *testing.T) {
 	t.Parallel()
 	domain := "test-domain"
 	workflowID := "test-workflow-id"
-	runID := "test-run-id"
+	runID := common.MustParseUUID("deadbeef-c001-face-0000-000000000002")
 	cancellationID := "2"
 	initiatedEventID := int64(28)
 	h := newDecisionsHelper()

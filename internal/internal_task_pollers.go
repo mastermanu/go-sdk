@@ -317,7 +317,7 @@ func (wtp *workflowTaskPoller) processResetStickinessTask(rst *resetStickinessTa
 	if _, err := wtp.service.ResetStickyTaskList(tchCtx, rst.task); err != nil {
 		wtp.logger.Warn("ResetStickyTaskList failed",
 			zap.String(tagWorkflowID, rst.task.Execution.GetWorkflowId()),
-			zap.String(tagRunID, rst.task.Execution.GetRunId()),
+			zap.String(tagRunID, common.UUIDString(rst.task.Execution.GetRunId())),
 			zap.Error(err))
 		return err
 	}
@@ -332,7 +332,7 @@ func (wtp *workflowTaskPoller) RespondTaskCompletedWithMetrics(completedRequest 
 		wtp.logger.Warn("Failed to process decision task.",
 			zap.String(tagWorkflowType, task.WorkflowType.GetName()),
 			zap.String(tagWorkflowID, task.WorkflowExecution.GetWorkflowId()),
-			zap.String(tagRunID, task.WorkflowExecution.GetRunId()),
+			zap.String(tagRunID, common.UUIDString(task.WorkflowExecution.GetRunId())),
 			zap.Error(taskErr))
 		// convert err to DecisionTaskFailed
 		completedRequest = errorToFailDecisionTask(task.TaskToken, taskErr, wtp.identity)
@@ -1006,7 +1006,7 @@ func convertActivityResultToRespondRequest(identity string, taskToken, result []
 		Identity:  identity}
 }
 
-func convertActivityResultToRespondRequestByID(identity, domain, workflowID, runID, activityID string,
+func convertActivityResultToRespondRequestByID(identity, domain, workflowID string, runID common.UUID, activityID string,
 	result []byte, err error, dataConverter DataConverter) interface{} {
 	if err == ErrActivityResultPending {
 		// activity result is pending and will be completed asynchronously.

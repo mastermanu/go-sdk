@@ -30,6 +30,8 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"go.temporal.io/temporal-proto/workflowservice"
+
+	"go.temporal.io/temporal/internal/common"
 )
 
 type (
@@ -252,7 +254,7 @@ func WithActivityTask(
 		zapcore.Field{Key: tagActivityType, Type: zapcore.StringType, String: task.ActivityType.Name},
 		zapcore.Field{Key: tagWorkflowType, Type: zapcore.StringType, String: task.WorkflowType.Name},
 		zapcore.Field{Key: tagWorkflowID, Type: zapcore.StringType, String: task.WorkflowExecution.WorkflowId},
-		zapcore.Field{Key: tagRunID, Type: zapcore.StringType, String: task.WorkflowExecution.RunId},
+		zapcore.Field{Key: tagRunID, Type: zapcore.StringType, String: common.UUIDString(task.WorkflowExecution.RunId)},
 	)
 
 	return context.WithValue(ctx, activityEnvContextKey, &activityEnvironment{
@@ -261,7 +263,7 @@ func WithActivityTask(
 		activityType:   ActivityType{Name: task.ActivityType.Name},
 		activityID:     task.ActivityId,
 		workflowExecution: WorkflowExecution{
-			RunID: task.WorkflowExecution.RunId,
+			RunID: common.UUIDString(task.WorkflowExecution.RunId),
 			ID:    task.WorkflowExecution.WorkflowId},
 		logger:             logger,
 		metricsScope:       scope,

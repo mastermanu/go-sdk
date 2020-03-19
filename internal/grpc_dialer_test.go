@@ -30,6 +30,8 @@ import (
 	"go.temporal.io/temporal-proto/serviceerror"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+
+	"go.temporal.io/temporal/internal/common"
 )
 
 func TestErrorWrapper_SimpleError(t *testing.T) {
@@ -47,11 +49,12 @@ func TestErrorWrapper_SimpleError(t *testing.T) {
 func TestErrorWrapper_ErrorWithFailure(t *testing.T) {
 	require := require.New(t)
 
+	rID := common.MustParseUUID("deadbeef-c001-face-0000-000000000001")
 	svcerr := errorInterceptor(context.Background(), "method", "request", "reply", nil,
 		func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
 			st, _ := status.New(codes.AlreadyExists, "Something started").WithDetails(&failure.WorkflowExecutionAlreadyStarted{
 				StartRequestId: "srId",
-				RunId:          "rId",
+				RunId:          rID,
 			})
 
 			return st.Err()
@@ -60,6 +63,6 @@ func TestErrorWrapper_ErrorWithFailure(t *testing.T) {
 	require.IsType(&serviceerror.WorkflowExecutionAlreadyStarted{}, svcerr)
 	require.Equal("Something started", svcerr.Error())
 	weasErr := svcerr.(*serviceerror.WorkflowExecutionAlreadyStarted)
-	require.Equal("rId", weasErr.RunId)
+	require.EqualValues(rID, weasErr.RunId)
 	require.Equal("srId", weasErr.StartRequestId)
 }

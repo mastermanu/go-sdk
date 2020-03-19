@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	guuid "github.com/google/uuid"
 	"github.com/uber-go/tally"
 	commonproto "go.temporal.io/temporal-proto/common"
 	"go.temporal.io/temporal/internal/common"
@@ -35,6 +36,7 @@ import (
 )
 
 var (
+	invalidRunIDErrFormat			 = "unable to parse runID - %v"
 	errDomainNotSet                  = errors.New("domain is not set")
 	errWorkflowIDNotSet              = errors.New("workflowId is not set")
 	errLocalActivityParamsBadRequest = errors.New("missing local activity parameters through context, check LocalActivityOptions")
@@ -852,6 +854,15 @@ func (wc *workflowEnvironmentInterceptor) RequestCancelExternalWorkflow(ctx Cont
 		return future
 	}
 
+	var parsedRunID guuid.UUID
+	var err0 error
+	if len(runID) != 0 {
+		parsedRunID, err0 = guuid.Parse(runID)
+		if err0 != nil {
+			settable.Set(nil, fmt.Errorf(invalidRunIDErrFormat, err0))
+		}
+	}
+
 	resultCallback := func(result []byte, err error) {
 		settable.Set(result, err)
 	}
@@ -859,7 +870,7 @@ func (wc *workflowEnvironmentInterceptor) RequestCancelExternalWorkflow(ctx Cont
 	wc.env.RequestCancelExternalWorkflow(
 		options.domain,
 		workflowID,
-		runID,
+		parsedRunID[:],
 		resultCallback,
 	)
 
@@ -906,13 +917,23 @@ func signalExternalWorkflow(ctx Context, workflowID, runID, signalName string, a
 		return future
 	}
 
+	var parsedRunID guuid.UUID
+	var err0 error
+	if len(runID) != 0 {
+		parsedRunID, err0 = guuid.Parse(runID)
+		if err0 != nil {
+			settable.Set(nil, fmt.Errorf(invalidRunIDErrFormat, err0))
+		}
+	}
+
 	resultCallback := func(result []byte, err error) {
 		settable.Set(result, err)
 	}
+
 	env.SignalExternalWorkflow(
 		options.domain,
 		workflowID,
-		runID,
+		parsedRunID[:],
 		signalName,
 		input,
 		arg,
